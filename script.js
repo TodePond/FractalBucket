@@ -1,8 +1,4 @@
-import { registerDotDee } from "./habitat.js";
-
-if (location.href.startsWith("http://localhost")) {
-	registerDotDee()
-}
+export { }
 
 if (!navigator.gpu) throw new Error("WebGPU is not supported in this browser.");
 const adapter = await navigator.gpu.requestAdapter();
