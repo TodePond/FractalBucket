@@ -37,7 +37,7 @@ const module = device.createShaderModule({
         @builtin(position) position : vec4<f32>,
       };
 
-      @vertex fn vs(
+      @vertex fn vertex(
         @builtin(vertex_index) vertexIndex : u32
       ) -> VertexOutput {
         let pos = array(
@@ -54,7 +54,7 @@ const module = device.createShaderModule({
         return output;
       }
  
-      @fragment fn fs(input: VertexOutput) -> @location(0) vec4f {
+      @fragment fn fragment(input: VertexOutput) -> @location(0) vec4f {
         let red = sin(clock.frame / 60.0) * 0.5 + 0.5;
         let green = input.position.y / canvas.size.y;
         let blue = input.position.x / canvas.size.x;
@@ -109,11 +109,11 @@ const pipeline = device.createRenderPipeline({
   }),
   vertex: {
     module,
-    entryPoint: "vs",
+    entryPoint: "vertex",
   },
   fragment: {
     module,
-    entryPoint: "fs",
+    entryPoint: "fragment",
     targets: [{ format: presentationFormat }],
   },
 });
