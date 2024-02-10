@@ -44,7 +44,7 @@ const module = device.createShaderModule({
           vec2f( 1.0,  1.0), // top right
           vec2f(-1.0, -1.0), // bottom left
           vec2f( 1.0, -1.0),  // bottom right
-          
+
           vec2f(-1.0,  1.0), // top left
           vec2f( 1.0,  1.0),  // top right
           vec2f(-1.0, -1.0),  // bottom left
@@ -149,21 +149,21 @@ const render = () => {
 const canvasUniformValues = new Float32Array(2);
 const canvasUniformBuffer = device.createBuffer({
   label: "canvas uniform buffer",
-  size: 4 * 2,
+  size: canvasUniformValues.byteLength,
   usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
 
 const clockUniformValues = new Float32Array(1);
 const clockUniformBuffer = device.createBuffer({
   label: "clock uniform buffer",
-  size: 4,
+  size: clockUniformValues.byteLength,
   usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
 
 const pointerUniformValues = new Float32Array(2);
 const pointerUniformBuffer = device.createBuffer({
-  label: "cursor uniform buffer",
-  size: 4 * 2,
+  label: "pointer uniform buffer",
+  size: pointerUniformValues.byteLength,
   usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
 
