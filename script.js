@@ -31,7 +31,7 @@ const module = device.createShaderModule({
       @group(0) @binding(1) var<uniform> clock: Clock;
       @group(0) @binding(0) var<uniform> canvas: Canvas;
       @group(0) @binding(2) var<uniform> pointer: Pointer;
-      @group(0) @binding(3) var<storage> cells: array<u32>;
+      @group(0) @binding(3) var<storage, read_write> cells: array<u32>;
 
       struct VertexOutput {
         @builtin(position) position : vec4<f32>,
@@ -73,6 +73,7 @@ const module = device.createShaderModule({
 
 const pipeline = device.createRenderPipeline({
   label: "pipeline",
+  //"auto",
   layout: device.createPipelineLayout({
     label: "pipeline layout",
     bindGroupLayouts: [
@@ -104,6 +105,15 @@ const pipeline = device.createRenderPipeline({
               minBindingSize: 8,
             },
           },
+          {
+            binding: 3,
+            visibility: GPUShaderStage.FRAGMENT,
+            buffer: {
+              type: "storage",
+              hasDynamicOffset: 0,
+              minBindingSize: 4,
+            },
+          },
         ],
       }),
     ],
@@ -121,6 +131,7 @@ const pipeline = device.createRenderPipeline({
 
 const render = () => {
   device.queue.writeBuffer(pointerUniformBuffer, 0, pointerUniformValues);
+  device.queue.writeBuffer(cellsStorageBuffer, 0, cellsStorageArray);
 
   const encoder = device.createCommandEncoder({ label: "encoder" });
 
@@ -180,6 +191,7 @@ const bindGroup = device.createBindGroup({
     { binding: 0, resource: { buffer: canvasUniformBuffer } },
     { binding: 1, resource: { buffer: clockUniformBuffer } },
     { binding: 2, resource: { buffer: pointerUniformBuffer } },
+    { binding: 3, resource: { buffer: cellsStorageBuffer } },
   ],
 });
 
