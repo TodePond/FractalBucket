@@ -118,31 +118,24 @@ const pipeline = device.createRenderPipeline({
   },
 });
 
-const renderPassDescriptor = {
-  label: "render pass",
-  colorAttachments: [
-    {
-      // view: undefined,
-      clearValue: [0.3, 0.3, 0.3, 1.0],
-      loadOp: "clear",
-      storeOp: "store",
-    },
-  ],
-};
-
 const render = () => {
   device.queue.writeBuffer(clockUniformBuffer, 0, clockUniformValues);
   device.queue.writeBuffer(canvasUniformBuffer, 0, canvasUniformValues);
   device.queue.writeBuffer(pointerUniformBuffer, 0, pointerUniformValues);
 
-  renderPassDescriptor.colorAttachments[0].view = context
-    .getCurrentTexture()
-    .createView();
-
   const encoder = device.createCommandEncoder({ label: "encoder" });
 
-  // @ts-expect-error - my types are wrong
-  const pass = encoder.beginRenderPass(renderPassDescriptor);
+  const pass = encoder.beginRenderPass({
+    label: "render pass",
+    colorAttachments: [
+      {
+        view: context.getCurrentTexture().createView(),
+        loadOp: "clear",
+        storeOp: "store",
+      },
+    ],
+  });
+
   pass.setPipeline(pipeline);
   pass.setBindGroup(0, bindGroup);
   pass.draw(6); // call shader six times (for the six points)
