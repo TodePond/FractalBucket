@@ -22,6 +22,12 @@ const module = device.createShaderModule({
 
       @group(0) @binding(0) var<uniform> canvas : Canvas;
 
+      struct Clock {
+        frame: f32,
+      };
+
+      @group(0) @binding(1) var<uniform> clock : Clock;
+
       struct VertexOutput {
         @builtin(position) position : vec4<f32>,
       };
@@ -52,7 +58,35 @@ const module = device.createShaderModule({
 
 const pipeline = device.createRenderPipeline({
   label: "pipeline",
-  layout: "auto",
+  layout: device.createPipelineLayout({
+    label: "pipeline layout",
+    bindGroupLayouts: [
+      device.createBindGroupLayout({
+        label: "bind group layout",
+        // @ts-expect-error - my types are wrong
+        entries: [
+          {
+            binding: 0,
+            visibility: GPUShaderStage.FRAGMENT,
+            buffer: {
+              type: "uniform",
+              hasDynamicOffset: 0,
+              minBindingSize: 8,
+            },
+          },
+          {
+            binding: 1,
+            visibility: GPUShaderStage.FRAGMENT,
+            buffer: {
+              type: "uniform",
+              hasDynamicOffset: 0,
+              minBindingSize: 4,
+            },
+          },
+        ],
+      }),
+    ],
+  }),
   vertex: {
     module,
     entryPoint: "vs",
@@ -76,7 +110,11 @@ const renderPassDescriptor = {
   ],
 };
 
+let frame = 0;
 const render = () => {
+  clockUniformValues[0] = frame;
+  device.queue.writeBuffer(clockUniformBuffer, 0, clockUniformValues);
+  frame++;
   device.queue.writeBuffer(canvasUniformBuffer, 0, canvasUniformValues);
 
   renderPassDescriptor.colorAttachments[0].view = context
@@ -104,10 +142,21 @@ const canvasUniformBuffer = device.createBuffer({
 });
 const canvasUniformValues = new Float32Array(2);
 
+const clockUniformBufferSize = 4; // 1 float
+const clockUniformBuffer = device.createBuffer({
+  label: "clock uniform buffer",
+  size: clockUniformBufferSize,
+  usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+});
+const clockUniformValues = new Float32Array(1);
+
 const bindGroup = device.createBindGroup({
-  label: "canvas uniform bind group",
+  label: "uniform bind group",
   layout: pipeline.getBindGroupLayout(0),
-  entries: [{ binding: 0, resource: { buffer: canvasUniformBuffer } }],
+  entries: [
+    { binding: 0, resource: { buffer: canvasUniformBuffer } },
+    { binding: 1, resource: { buffer: clockUniformBuffer } },
+  ],
 });
 
 const handleResize = () => {
