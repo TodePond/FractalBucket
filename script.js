@@ -65,6 +65,14 @@ const module = device.createShaderModule({
           return vec4(1.0, 1.0, 1.0, 1.0);
         }
 
+        let gridIndex = u32(input.position.x / canvas.size.x * 100.0) + u32(input.position.y / canvas.size.y * 100.0) * 100u;
+        let cell = cells[gridIndex];
+      
+
+        if (cell == 1) {
+          return vec4(red, blue, green, 1.0);
+        }
+
         return vec4(red, green, blue, 1.0);
         
       }
@@ -222,5 +230,9 @@ const tick = () => {
   render();
   requestAnimationFrame(tick);
 };
+
+for (let i = 0; i < cellsStorageArray.length; i++) {
+  cellsStorageArray[i] = i % 3 === 0 ? 0 : 1;
+}
 
 tick();
