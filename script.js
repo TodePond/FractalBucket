@@ -1,122 +1,125 @@
-export { }
+export {};
 
-if (!navigator.gpu) throw new Error("WebGPU is not supported in this browser.");
-const adapter = await navigator.gpu.requestAdapter();
-if (!adapter) throw new Error("Couldn't get WebGPU adapter.");
+const adapter = await navigator.gpu?.requestAdapter();
+if (!adapter) throw new Error("Browser doesn't support WebGPU");
 const device = await adapter.requestDevice();
-if (!device) throw new Error("Couldn't get WebGPU device.");
-
-const shaders = `
-	struct VertexOut {
-		@builtin(position) position : vec4f,
-		@location(0) color : vec4f
-	}
-
-	@vertex
-	fn vertex_main(@location(0) position: vec4f, @location(1) color: vec4f) -> VertexOut {
-		var output : VertexOut;
-		output.position = position;
-		output.color = color;
-		return output;
-	}
-
-	@fragment
-	fn fragment_main(fragData: VertexOut) -> @location(0) vec4f {
-		return fragData.color;
-	}
-`;
-
-const shaderModule = device.createShaderModule({
-	code: shaders,
-})
+if (!device) throw new Error("Browser doesn't support WebGPU");
 
 const canvas = document.querySelector("canvas");
-if (!canvas) throw new Error("Canvas not found.");
+if (!canvas) throw new Error("Can't get canvas");
 const context = canvas.getContext("webgpu");
-if (!context) throw new Error("WebGPU context not found.");
+if (!context) throw new Error("Can't get context");
 
-context.configure({
-	device,
-	format: navigator.gpu.getPreferredCanvasFormat(),
-	alphaMode: "premultiplied",
-})
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+context.configure({ device, format: presentationFormat });
 
-const vertices = new Float32Array([
-	0.0, 0.6, 0, 1, 1, 0, 0, 1, -0.5, -0.6, 0, 1, 0, 1, 0, 1, 0.5, -0.6, 0, 1, 0,
-	0, 1, 1,
-]);
+const module = device.createShaderModule({
+  label: "shaders",
+  code: `
+      struct Canvas {
+        size: vec2<f32>,
+      };
 
-// Create our empty buffer
-const vertexBuffer = device.createBuffer({
-	size: vertices.byteLength,
-	usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      @group(0) @binding(0) var<uniform> canvas : Canvas;
+
+      struct VertexOutput {
+        @builtin(position) position : vec4<f32>,
+      };
+
+      @vertex fn vs(
+        @builtin(vertex_index) vertexIndex : u32
+      ) -> VertexOutput {
+        let pos = array(
+          vec2f( 1.0,  1.0), // top right
+          vec2f(-1.0, -1.0), // bottom left
+          vec2f( 1.0, -1.0),  // bottom right
+          vec2f(-1.0,  1.0), // top left
+          vec2f( 1.0,  1.0),  // top right
+          vec2f(-1.0, -1.0),  // bottom left
+        );
+ 
+        var output: VertexOutput;
+        output.position = vec4f(pos[vertexIndex], 0.0, 1.0);
+        return output;
+      }
+ 
+      @fragment fn fs(input: VertexOutput) -> @location(0) vec4f {
+        return vec4<f32>(0.0, input.position.y / canvas.size.y, input.position.x / canvas.size.x, 1.0);
+        
+      }
+    `,
 });
 
-// Write data into the buffer
-device.queue.writeBuffer(vertexBuffer, 0, vertices, 0, vertices.length);
-
-const vertexBufferDescriptor = {
-	attributes: [
-		{
-			shaderLocation: 0, // position
-			offset: 0,
-			format: "float32x4",
-		},
-		{
-			shaderLocation: 1, // color
-			offset: 16,
-			format: "float32x4",
-		},
-	],
-	arrayStride: 32,
-	stepMode: "vertex",
-};
-
-const pipelineDescriptor = {
-	vertex: {
-		module: shaderModule,
-		entryPoint: "vertex_main",
-		buffers: [vertexBufferDescriptor],
-	},
-	fragment: {
-		module: shaderModule,
-		entryPoint: "fragment_main",
-		targets: [
-			{
-				format: "bgra8unorm",
-			},
-		],
-	},
-	primitive: {
-		topology: "triangle-list",
-	},
-	layout: "auto"
-};
-
-// @ts-expect-error: my types file is wrong
-const renderPipeline = device.createRenderPipeline(pipelineDescriptor);
-
-const commandEncoder = device.createCommandEncoder();
-
-const clearColor = { r: 0.0, g: 0.5, b: 1.0, a: 1.0 };
+const pipeline = device.createRenderPipeline({
+  label: "pipeline",
+  layout: "auto",
+  vertex: {
+    module,
+    entryPoint: "vs",
+  },
+  fragment: {
+    module,
+    entryPoint: "fs",
+    targets: [{ format: presentationFormat }],
+  },
+});
 
 const renderPassDescriptor = {
-	colorAttachments: [
-		{
-			clearValue: clearColor,
-			loadOp: "clear",
-			storeOp: "store",
-			view: context.getCurrentTexture().createView(),
-		},
-	],
+  label: "render pass",
+  colorAttachments: [
+    {
+      // view: undefined,
+      clearValue: [0.3, 0.3, 0.3, 1.0],
+      loadOp: "clear",
+      storeOp: "store",
+    },
+  ],
 };
 
-// @ts-expect-error: my types file is wrong
-const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+const render = () => {
+  device.queue.writeBuffer(canvasUniformBuffer, 0, canvasUniformValues);
 
-passEncoder.setPipeline(renderPipeline);
-passEncoder.setVertexBuffer(0, vertexBuffer);
-passEncoder.draw(3);
-passEncoder.end();
+  renderPassDescriptor.colorAttachments[0].view = context
+    .getCurrentTexture()
+    .createView();
 
-device.queue.submit([commandEncoder.finish()]);
+  const encoder = device.createCommandEncoder({ label: "encoder" });
+
+  // @ts-expect-error - my types are wrong
+  const pass = encoder.beginRenderPass(renderPassDescriptor);
+  pass.setPipeline(pipeline);
+  pass.setBindGroup(0, bindGroup);
+  pass.draw(6); // call shader three times (for the three points)
+  pass.end();
+
+  const commandBuffer = encoder.finish();
+  device.queue.submit([commandBuffer]);
+};
+
+const canvasUniformBufferSize = 2 * 4; // 2 floats
+const canvasUniformBuffer = device.createBuffer({
+  label: "canvas uniform buffer",
+  size: canvasUniformBufferSize,
+  usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+});
+const canvasUniformValues = new Float32Array(2);
+
+const bindGroup = device.createBindGroup({
+  label: "canvas uniform bind group",
+  layout: pipeline.getBindGroupLayout(0),
+  entries: [{ binding: 0, resource: { buffer: canvasUniformBuffer } }],
+});
+
+const handleResize = () => {
+  canvas.width = window.innerWidth * devicePixelRatio;
+  canvas.height = window.innerHeight * devicePixelRatio;
+  canvasUniformValues[0] = canvas.width;
+  canvasUniformValues[1] = canvas.height;
+  context.configure({ device, format: presentationFormat });
+  render();
+};
+
+canvas.style.width = "100%";
+canvas.style.height = "100%";
+addEventListener("resize", handleResize);
+handleResize();
