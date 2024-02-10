@@ -28,17 +28,17 @@ const module = device.createShaderModule({
         position: vec2<f32>,
       };
 
-      @group(0) @binding(1) var<uniform> clock : Clock;
-      @group(0) @binding(0) var<uniform> canvas : Canvas;
-      @group(0) @binding(2) var<uniform> pointer : Pointer;
-
+      @group(0) @binding(1) var<uniform> clock: Clock;
+      @group(0) @binding(0) var<uniform> canvas: Canvas;
+      @group(0) @binding(2) var<uniform> pointer: Pointer;
+      @group(0) @binding(3) var<storage> cells: array<u32>;
 
       struct VertexOutput {
         @builtin(position) position : vec4<f32>,
       };
 
       @vertex fn vertex(
-        @builtin(vertex_index) vertexIndex : u32
+        @builtin(vertex_index) vertexIndex: u32
       ) -> VertexOutput {
         let pos = array(
           vec2f( 1.0,  1.0), // top right
@@ -120,8 +120,6 @@ const pipeline = device.createRenderPipeline({
 });
 
 const render = () => {
-  device.queue.writeBuffer(clockUniformBuffer, 0, clockUniformValues);
-  device.queue.writeBuffer(canvasUniformBuffer, 0, canvasUniformValues);
   device.queue.writeBuffer(pointerUniformBuffer, 0, pointerUniformValues);
 
   const encoder = device.createCommandEncoder({ label: "encoder" });
@@ -167,6 +165,14 @@ const pointerUniformBuffer = device.createBuffer({
   usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
 
+const GRID_SIZE = 100;
+const cellsStorageArray = new Uint32Array(GRID_SIZE * GRID_SIZE);
+const cellsStorageBuffer = device.createBuffer({
+  label: "cell storage buffer",
+  size: cellsStorageArray.byteLength,
+  usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+});
+
 const bindGroup = device.createBindGroup({
   label: "uniform bind group",
   layout: pipeline.getBindGroupLayout(0),
@@ -182,6 +188,7 @@ const handleResize = () => {
   canvas.height = window.innerHeight * devicePixelRatio;
   canvasUniformValues[0] = canvas.width;
   canvasUniformValues[1] = canvas.height;
+  device.queue.writeBuffer(canvasUniformBuffer, 0, canvasUniformValues);
   render();
 };
 
@@ -198,6 +205,7 @@ handleResize();
 let frame = 0;
 const tick = () => {
   clockUniformValues[0] = frame;
+  device.queue.writeBuffer(clockUniformBuffer, 0, clockUniformValues);
   frame++;
   render();
   requestAnimationFrame(tick);
