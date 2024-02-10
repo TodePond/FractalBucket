@@ -89,7 +89,7 @@ const render = () => {
   const pass = encoder.beginRenderPass(renderPassDescriptor);
   pass.setPipeline(pipeline);
   pass.setBindGroup(0, bindGroup);
-  pass.draw(6); // call shader three times (for the three points)
+  pass.draw(6); // call shader six times (for the six points)
   pass.end();
 
   const commandBuffer = encoder.finish();
