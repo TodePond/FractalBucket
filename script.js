@@ -20,13 +20,18 @@ const module = device.createShaderModule({
         size: vec2<f32>,
       };
 
-      @group(0) @binding(0) var<uniform> canvas : Canvas;
-
       struct Clock {
         frame: f32,
       };
 
+      struct Pointer {
+        position: vec2<f32>,
+      };
+
       @group(0) @binding(1) var<uniform> clock : Clock;
+      @group(0) @binding(0) var<uniform> canvas : Canvas;
+      @group(0) @binding(2) var<uniform> pointer : Pointer;
+
 
       struct VertexOutput {
         @builtin(position) position : vec4<f32>,
@@ -50,7 +55,16 @@ const module = device.createShaderModule({
       }
  
       @fragment fn fs(input: VertexOutput) -> @location(0) vec4f {
-        return vec4<f32>(0.0, input.position.y / canvas.size.y, input.position.x / canvas.size.x, 1.0);
+        let red = sin(clock.frame / 60.0) * 0.5 + 0.5;
+        let green = input.position.y / canvas.size.y;
+        let blue = input.position.x / canvas.size.x;
+
+        let distanceToPointer = distance(input.position.xy, pointer.position);
+        if (distanceToPointer < 50.0) {
+          return vec4(1.0, 1.0, 1.0, 1.0);
+        }
+
+        return vec4(red, green, blue, 1.0);
         
       }
     `,
@@ -69,7 +83,6 @@ const pipeline = device.createRenderPipeline({
             binding: 0,
             visibility: GPUShaderStage.FRAGMENT,
             buffer: {
-              type: "uniform",
               hasDynamicOffset: 0,
               minBindingSize: 8,
             },
@@ -78,9 +91,16 @@ const pipeline = device.createRenderPipeline({
             binding: 1,
             visibility: GPUShaderStage.FRAGMENT,
             buffer: {
-              type: "uniform",
               hasDynamicOffset: 0,
               minBindingSize: 4,
+            },
+          },
+          {
+            binding: 2,
+            visibility: GPUShaderStage.FRAGMENT,
+            buffer: {
+              hasDynamicOffset: 0,
+              minBindingSize: 8,
             },
           },
         ],
@@ -110,12 +130,10 @@ const renderPassDescriptor = {
   ],
 };
 
-let frame = 0;
 const render = () => {
-  clockUniformValues[0] = frame;
   device.queue.writeBuffer(clockUniformBuffer, 0, clockUniformValues);
-  frame++;
   device.queue.writeBuffer(canvasUniformBuffer, 0, canvasUniformValues);
+  device.queue.writeBuffer(pointerUniformBuffer, 0, pointerUniformValues);
 
   renderPassDescriptor.colorAttachments[0].view = context
     .getCurrentTexture()
@@ -134,21 +152,26 @@ const render = () => {
   device.queue.submit([commandBuffer]);
 };
 
-const canvasUniformBufferSize = 2 * 4; // 2 floats
+const canvasUniformValues = new Float32Array(2);
 const canvasUniformBuffer = device.createBuffer({
   label: "canvas uniform buffer",
-  size: canvasUniformBufferSize,
+  size: 4 * 2,
   usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
-const canvasUniformValues = new Float32Array(2);
 
-const clockUniformBufferSize = 4; // 1 float
+const clockUniformValues = new Float32Array(1);
 const clockUniformBuffer = device.createBuffer({
   label: "clock uniform buffer",
-  size: clockUniformBufferSize,
+  size: 4,
   usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
-const clockUniformValues = new Float32Array(1);
+
+const pointerUniformValues = new Float32Array(2);
+const pointerUniformBuffer = device.createBuffer({
+  label: "cursor uniform buffer",
+  size: 4 * 2,
+  usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+});
 
 const bindGroup = device.createBindGroup({
   label: "uniform bind group",
@@ -156,6 +179,7 @@ const bindGroup = device.createBindGroup({
   entries: [
     { binding: 0, resource: { buffer: canvasUniformBuffer } },
     { binding: 1, resource: { buffer: clockUniformBuffer } },
+    { binding: 2, resource: { buffer: pointerUniformBuffer } },
   ],
 });
 
@@ -164,11 +188,25 @@ const handleResize = () => {
   canvas.height = window.innerHeight * devicePixelRatio;
   canvasUniformValues[0] = canvas.width;
   canvasUniformValues[1] = canvas.height;
-  context.configure({ device, format: presentationFormat });
   render();
 };
+
+addEventListener("pointermove", (event) => {
+  pointerUniformValues[0] = event.clientX * devicePixelRatio;
+  pointerUniformValues[1] = event.clientY * devicePixelRatio;
+});
 
 canvas.style.width = "100%";
 canvas.style.height = "100%";
 addEventListener("resize", handleResize);
 handleResize();
+
+let frame = 0;
+const tick = () => {
+  clockUniformValues[0] = frame;
+  frame++;
+  render();
+  requestAnimationFrame(tick);
+};
+
+tick();
