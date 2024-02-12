@@ -62,20 +62,20 @@ const module = device.createShaderModule({
         let green = input.position.y / canvas.size.y;
         let blue = input.position.x / canvas.size.x;
 
-        let gridIndex = u32(input.position.x / canvas.size.x * 100.0) + u32(input.position.y / canvas.size.y * 100.0) * 100u;
-        let cell = cells[gridIndex];
+        let index = u32(input.position.x / canvas.size.x * 100.0) + u32(input.position.y / canvas.size.y * 100.0) * 100u;
+        let cell = cells[index];
       
         if (pointer.down > 0.5) {
           if (pointer.previousPosition.x < -1.0) {
             let distanceToPointer = distance(input.position.xy, pointer.position);
             if (distanceToPointer < 50.0) {
-              cells[gridIndex] = 1u;
+              cells[index] = 1u;
               // return vec4(1.0, 1.0, 1.0, 1.0);
             }
           } else {
             let distanceToPointer = distanceToLine(pointer.previousPosition, pointer.position, input.position.xy);
             if (distanceToPointer < 50.0) {
-              cells[gridIndex] = 1u;
+              cells[index] = 1u;
               // return vec4(1.0, 1.0, 1.0, 1.0);
             }
           }
