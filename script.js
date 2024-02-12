@@ -26,6 +26,7 @@ const module = device.createShaderModule({
 
       struct Pointer {
         position: vec2<f32>,
+        previousPosition: vec2<f32>,
       };
 
       @group(0) @binding(1) var<uniform> clock: Clock;
@@ -63,10 +64,18 @@ const module = device.createShaderModule({
         let gridIndex = u32(input.position.x / canvas.size.x * 100.0) + u32(input.position.y / canvas.size.y * 100.0) * 100u;
         let cell = cells[gridIndex];
       
-        let distanceToPointer = distance(input.position.xy, pointer.position);
-        if (distanceToPointer < 50.0) {
-          cells[gridIndex] = 1u;
-          // return vec4(1.0, 1.0, 1.0, 1.0);
+        if (pointer.previousPosition.x < -1.0) {
+          let distanceToPointer = distance(input.position.xy, pointer.position);
+          if (distanceToPointer < 50.0) {
+            cells[gridIndex] = 1u;
+            // return vec4(1.0, 1.0, 1.0, 1.0);
+          }
+        } else {
+          let distanceToPointer = distanceToLine(pointer.previousPosition, pointer.position, input.position.xy);
+          if (distanceToPointer < 50.0) {
+            cells[gridIndex] = 1u;
+            // return vec4(1.0, 1.0, 1.0, 1.0);
+          }
         }
 
         if (cell == 1) {
@@ -75,6 +84,38 @@ const module = device.createShaderModule({
 
         return vec4(red, green, blue, 1.0);
         
+      }
+
+      // Javascript function
+      // export function findNearestPointOnLine(px: number, py: number, ax: number, ay: number, bx: number, by: number)
+      // {
+      //     const atob = { x: bx - ax, y: by - ay };
+      //     const atop = { x: px - ax, y: py - ay };
+      //     const len = (atob.x * atob.x) + (atob.y * atob.y);
+      //     let dot = (atop.x * atob.x) + (atop.y * atob.y);
+      //     const t = Math.min(1, Math.max(0, dot / len));
+
+      //     dot = ((bx - ax) * (py - ay)) - ((by - ay) * (px - ax));
+
+      //     return { x: ax + (atob.x * t), y: ay + (atob.y * t) };
+      // }
+
+      // gl version of the above
+      fn findNearestPointOnLine(px: f32, py: f32, ax: f32, ay: f32, bx: f32, by: f32) -> vec2<f32> {
+        let atob = vec2f(bx - ax, by - ay);
+        let atop = vec2f(px - ax, py - ay);
+        let len = (atob.x * atob.x) + (atob.y * atob.y);
+        var dot = (atop.x * atob.x) + (atop.y * atob.y);
+        let t = min(1.0, max(0.0, dot / len));
+
+        dot = ((bx - ax) * (py - ay)) - ((by - ay) * (px - ax));
+
+        return vec2f(ax + (atob.x * t), ay + (atob.y * t));
+      }
+
+      fn distanceToLine(a: vec2<f32>, b: vec2<f32>, p: vec2<f32>) -> f32 {
+        let nearest = findNearestPointOnLine(p.x, p.y, a.x, a.y, b.x, b.y);
+        return distance(nearest, p);
       }
     `,
 });
@@ -90,6 +131,7 @@ const pipeline = device.createRenderPipeline({
         // @ts-expect-error - my types are wrong
         entries: [
           {
+            // canvas uniform
             binding: 0,
             visibility: GPUShaderStage.FRAGMENT,
             buffer: {
@@ -98,6 +140,7 @@ const pipeline = device.createRenderPipeline({
             },
           },
           {
+            // clock uniform
             binding: 1,
             visibility: GPUShaderStage.FRAGMENT,
             buffer: {
@@ -106,14 +149,16 @@ const pipeline = device.createRenderPipeline({
             },
           },
           {
+            // pointer uniform
             binding: 2,
             visibility: GPUShaderStage.FRAGMENT,
             buffer: {
               hasDynamicOffset: 0,
-              minBindingSize: 8,
+              minBindingSize: 16,
             },
           },
           {
+            // cells storage
             binding: 3,
             visibility: GPUShaderStage.FRAGMENT,
             buffer: {
@@ -137,7 +182,11 @@ const pipeline = device.createRenderPipeline({
   },
 });
 
+let previousPointerPosition = [-2, -2];
 const render = () => {
+  pointerUniformValues[2] = previousPointerPosition[0];
+  pointerUniformValues[3] = previousPointerPosition[1];
+  previousPointerPosition = [pointerUniformValues[0], pointerUniformValues[1]];
   device.queue.writeBuffer(pointerUniformBuffer, 0, pointerUniformValues);
   // device.queue.writeBuffer(cellsStorageBuffer, 0, cellsStorageArray);
 
@@ -177,12 +226,15 @@ const clockUniformBuffer = device.createBuffer({
   usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
 
-const pointerUniformValues = new Float32Array(2);
+const pointerUniformValues = new Float32Array(4);
 const pointerUniformBuffer = device.createBuffer({
   label: "pointer uniform buffer",
   size: pointerUniformValues.byteLength,
   usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
+
+pointerUniformValues[0] = -2;
+pointerUniformValues[1] = -2;
 
 const GRID_SIZE = 100;
 const cellsStorageArray = new Uint32Array(GRID_SIZE * GRID_SIZE);
