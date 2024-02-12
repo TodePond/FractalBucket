@@ -27,6 +27,7 @@ const module = device.createShaderModule({
       struct Pointer {
         position: vec2<f32>,
         previousPosition: vec2<f32>,
+        down: f32,
       };
 
       @group(0) @binding(1) var<uniform> clock: Clock;
@@ -57,50 +58,38 @@ const module = device.createShaderModule({
       }
  
       @fragment fn fragment(input: VertexOutput) -> @location(0) vec4f {
-        let red = sin(clock.frame / 60.0) * 0.5 + 0.5;
+        let red = (sin(clock.frame / 60.0) * 0.5 + 0.5);
         let green = input.position.y / canvas.size.y;
         let blue = input.position.x / canvas.size.x;
 
         let gridIndex = u32(input.position.x / canvas.size.x * 100.0) + u32(input.position.y / canvas.size.y * 100.0) * 100u;
         let cell = cells[gridIndex];
       
-        if (pointer.previousPosition.x < -1.0) {
-          let distanceToPointer = distance(input.position.xy, pointer.position);
-          if (distanceToPointer < 50.0) {
-            cells[gridIndex] = 1u;
-            // return vec4(1.0, 1.0, 1.0, 1.0);
-          }
-        } else {
-          let distanceToPointer = distanceToLine(pointer.previousPosition, pointer.position, input.position.xy);
-          if (distanceToPointer < 50.0) {
-            cells[gridIndex] = 1u;
-            // return vec4(1.0, 1.0, 1.0, 1.0);
+        if (pointer.down > 0.5) {
+          if (pointer.previousPosition.x < -1.0) {
+            let distanceToPointer = distance(input.position.xy, pointer.position);
+            if (distanceToPointer < 50.0) {
+              cells[gridIndex] = 1u;
+              // return vec4(1.0, 1.0, 1.0, 1.0);
+            }
+          } else {
+            let distanceToPointer = distanceToLine(pointer.previousPosition, pointer.position, input.position.xy);
+            if (distanceToPointer < 50.0) {
+              cells[gridIndex] = 1u;
+              // return vec4(1.0, 1.0, 1.0, 1.0);
+            }
           }
         }
 
         if (cell == 1) {
-          return vec4(red, blue, green, 1.0);
+          return vec4(1 - red * 1, blue, green, 1.0);
         }
 
         return vec4(red, green, blue, 1.0);
         
       }
 
-      // Javascript function
-      // export function findNearestPointOnLine(px: number, py: number, ax: number, ay: number, bx: number, by: number)
-      // {
-      //     const atob = { x: bx - ax, y: by - ay };
-      //     const atop = { x: px - ax, y: py - ay };
-      //     const len = (atob.x * atob.x) + (atob.y * atob.y);
-      //     let dot = (atop.x * atob.x) + (atop.y * atob.y);
-      //     const t = Math.min(1, Math.max(0, dot / len));
-
-      //     dot = ((bx - ax) * (py - ay)) - ((by - ay) * (px - ax));
-
-      //     return { x: ax + (atob.x * t), y: ay + (atob.y * t) };
-      // }
-
-      // gl version of the above
+      // copied from stackoverflow
       fn findNearestPointOnLine(px: f32, py: f32, ax: f32, ay: f32, bx: f32, by: f32) -> vec2<f32> {
         let atob = vec2f(bx - ax, by - ay);
         let atop = vec2f(px - ax, py - ay);
@@ -154,7 +143,7 @@ const pipeline = device.createRenderPipeline({
             visibility: GPUShaderStage.FRAGMENT,
             buffer: {
               hasDynamicOffset: 0,
-              minBindingSize: 16,
+              minBindingSize: 24,
             },
           },
           {
@@ -226,7 +215,7 @@ const clockUniformBuffer = device.createBuffer({
   usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
 
-const pointerUniformValues = new Float32Array(4);
+const pointerUniformValues = new Float32Array(6);
 const pointerUniformBuffer = device.createBuffer({
   label: "pointer uniform buffer",
   size: pointerUniformValues.byteLength,
@@ -274,6 +263,14 @@ addEventListener("pointermove", (event) => {
   // ];
 
   // console.log(gridPosition);
+});
+
+addEventListener("pointerdown", (event) => {
+  pointerUniformValues[4] = 1;
+});
+
+addEventListener("pointerup", (event) => {
+  pointerUniformValues[4] = 0;
 });
 
 canvas.style.width = "100%";
