@@ -60,14 +60,14 @@ const module = device.createShaderModule({
         let green = input.position.y / canvas.size.y;
         let blue = input.position.x / canvas.size.x;
 
-        let distanceToPointer = distance(input.position.xy, pointer.position);
-        if (distanceToPointer < 50.0) {
-          return vec4(1.0, 1.0, 1.0, 1.0);
-        }
-
         let gridIndex = u32(input.position.x / canvas.size.x * 100.0) + u32(input.position.y / canvas.size.y * 100.0) * 100u;
         let cell = cells[gridIndex];
       
+        let distanceToPointer = distance(input.position.xy, pointer.position);
+        if (distanceToPointer < 50.0) {
+          cells[gridIndex] = 1u;
+          // return vec4(1.0, 1.0, 1.0, 1.0);
+        }
 
         if (cell == 1) {
           return vec4(red, blue, green, 1.0);
@@ -139,7 +139,7 @@ const pipeline = device.createRenderPipeline({
 
 const render = () => {
   device.queue.writeBuffer(pointerUniformBuffer, 0, pointerUniformValues);
-  device.queue.writeBuffer(cellsStorageBuffer, 0, cellsStorageArray);
+  // device.queue.writeBuffer(cellsStorageBuffer, 0, cellsStorageArray);
 
   const encoder = device.createCommandEncoder({ label: "encoder" });
 
@@ -215,6 +215,13 @@ const handleResize = () => {
 addEventListener("pointermove", (event) => {
   pointerUniformValues[0] = event.clientX * devicePixelRatio;
   pointerUniformValues[1] = event.clientY * devicePixelRatio;
+
+  // const gridPosition = [
+  //   Math.floor((event.clientX / window.innerWidth) * GRID_SIZE),
+  //   Math.floor((event.clientY / window.innerHeight) * GRID_SIZE),
+  // ];
+
+  // console.log(gridPosition);
 });
 
 canvas.style.width = "100%";
@@ -232,7 +239,7 @@ const tick = () => {
 };
 
 for (let i = 0; i < cellsStorageArray.length; i++) {
-  cellsStorageArray[i] = i % 3 === 0 ? 0 : 1;
+  // cellsStorageArray[i] = i % 2 === 0 ? 0 : 1;
 }
 
 tick();
