@@ -1,9 +1,15 @@
 export {};
 
 const adapter = await navigator.gpu?.requestAdapter();
-if (!adapter) throw new Error("Browser doesn't support WebGPU");
+if (!adapter) {
+  alert("Browser doesn't support WebGPU");
+  throw new Error("Browser doesn't support WebGPU");
+}
 const device = await adapter.requestDevice();
-if (!device) throw new Error("Browser doesn't support WebGPU");
+if (!device) {
+  alert("Browser doesn't support WebGPU");
+  throw new Error("Browser doesn't support WebGPU");
+}
 
 const canvas = document.querySelector("canvas");
 if (!canvas) throw new Error("Can't get canvas");
