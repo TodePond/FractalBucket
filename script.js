@@ -1,5 +1,7 @@
 export {};
 
+const GRID_SIZE = 500;
+
 const adapter = await navigator.gpu?.requestAdapter();
 if (!adapter) {
   alert("Browser doesn't support WebGPU");
@@ -65,20 +67,20 @@ const module = device.createShaderModule({
       }
  
       @fragment fn fragment(input: VertexOutput) -> @location(0) vec4f {
-        let red = (sin(clock.frame / 60.0) * 0.5 + 0.5);
+        let red = (sin(clock.frame / 240.0) * 0.5 + 0.5);
         let green = input.position.y / canvas.size.y;
         let blue = input.position.x / canvas.size.x;
-
-        let index = u32(input.position.x / canvas.size.x * 100.0) + u32(input.position.y / canvas.size.y * 100.0) * 100u;
+        
+        let index = u32(input.position.x / canvas.size.x * ${GRID_SIZE}.0) + u32(input.position.y / canvas.size.y * ${GRID_SIZE}.0) * ${GRID_SIZE}u;
         
         let cell = cellsPing[index];
-        let below = cellsPing[index + 100u];
-        let above = cellsPing[index - 100u];
+        let below = cellsPing[index + ${GRID_SIZE}u];
+        let above = cellsPing[index - ${GRID_SIZE}u];
         
         cellsPong[index] = cell;
 
         if (cell == 1u) {
-          if (index + 100u < 10000u) {
+          if (index + ${GRID_SIZE}u < ${GRID_SIZE * GRID_SIZE}u) {
             if (below == 0u) {
               cellsPong[index] = 0u;
             }
@@ -86,7 +88,7 @@ const module = device.createShaderModule({
         }
 
         if (cell == 0u) {
-          if (index - 100u < 10000u) {
+          if (index - ${GRID_SIZE}u < ${GRID_SIZE * GRID_SIZE}u) {
             if (above == 1u) {
               cellsPong[index] = 1u;
             }
@@ -95,7 +97,7 @@ const module = device.createShaderModule({
 
         if (pointer.down > 0.5) {
           let distanceToPointer = distanceToNearestPointOnLineSegment(pointer.previousPosition, pointer.position, input.position.xy);
-          if (distanceToPointer < 20.0) {
+          if (distanceToPointer < 50.0) {
             cellsPong[index] = 1u;
             // return vec4(1.0, 1.0, 1.0, 1.0);
           }
@@ -256,7 +258,6 @@ const pointerUniformBuffer = device.createBuffer({
 // pointerUniformValues[2] = -2;
 // pointerUniformValues[3] = -2;
 
-const GRID_SIZE = 100;
 const cellsPingStorageArray = new Uint32Array(GRID_SIZE * GRID_SIZE);
 const cellsPingStorageBuffer = device.createBuffer({
   label: "cell ping storage buffer",
