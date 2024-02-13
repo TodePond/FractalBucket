@@ -230,6 +230,8 @@ const pointerUniformBuffer = device.createBuffer({
 
 pointerUniformValues[0] = -2;
 pointerUniformValues[1] = -2;
+pointerUniformValues[2] = -2;
+pointerUniformValues[3] = -2;
 
 const GRID_SIZE = 100;
 const cellsStorageArray = new Uint32Array(GRID_SIZE * GRID_SIZE);
@@ -277,6 +279,9 @@ addEventListener("pointerdown", (event) => {
 
 addEventListener("pointerup", (event) => {
   pointerUniformValues[4] = 0;
+
+  pointerUniformValues[0] = -2;
+  pointerUniformValues[1] = -2;
 });
 
 canvas.style.width = "100%";
