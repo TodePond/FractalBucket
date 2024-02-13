@@ -39,7 +39,8 @@ const module = device.createShaderModule({
       @group(0) @binding(1) var<uniform> clock: Clock;
       @group(0) @binding(0) var<uniform> canvas: Canvas;
       @group(0) @binding(2) var<uniform> pointer: Pointer;
-      @group(0) @binding(3) var<storage, read_write> cells: array<u32>;
+      @group(0) @binding(3) var<storage, read_write> cellsPing: array<u32>;
+      @group(0) @binding(4) var<storage, read_write> cellsPong: array<u32>;
 
       struct VertexOutput {
         @builtin(position) position : vec4<f32>,
@@ -69,48 +70,58 @@ const module = device.createShaderModule({
         let blue = input.position.x / canvas.size.x;
 
         let index = u32(input.position.x / canvas.size.x * 100.0) + u32(input.position.y / canvas.size.y * 100.0) * 100u;
-        let cell = cells[index];
-      
-        if (pointer.down > 0.5) {
-          if (pointer.previousPosition.x < -1.0) {
-            let distanceToPointer = distance(input.position.xy, pointer.position);
-            if (distanceToPointer < 50.0) {
-              cells[index] = 1u;
-              // return vec4(1.0, 1.0, 1.0, 1.0);
-            }
-          } else {
-            let distanceToPointer = distanceToLine(pointer.previousPosition, pointer.position, input.position.xy);
-            if (distanceToPointer < 50.0) {
-              cells[index] = 1u;
-              // return vec4(1.0, 1.0, 1.0, 1.0);
+        
+        let cell = cellsPing[index];
+        let below = cellsPing[index + 100u];
+        let above = cellsPing[index - 100u];
+        
+        cellsPong[index] = cell;
+
+        if (cell == 1u) {
+          if (index + 100u < 10000u) {
+            if (below == 0u) {
+              cellsPong[index] = 0u;
             }
           }
         }
 
-        if (cell == 1) {
+        if (cell == 0u) {
+          if (index - 100u < 10000u) {
+            if (above == 1u) {
+              cellsPong[index] = 1u;
+            }
+          }
+        }
+
+        if (pointer.down > 0.5) {
+          let distanceToPointer = distanceToNearestPointOnLineSegment(pointer.previousPosition, pointer.position, input.position.xy);
+          if (distanceToPointer < 20.0) {
+            cellsPong[index] = 1u;
+            // return vec4(1.0, 1.0, 1.0, 1.0);
+          }
+        }
+
+        if (cellsPong[index] == 1) {
           return vec4(1 - red * 1, blue, green, 1.0);
         }
 
         return vec4(red, green, blue, 1.0);
-        
       }
 
-      // copied from stackoverflow
-      fn findNearestPointOnLine(px: f32, py: f32, ax: f32, ay: f32, bx: f32, by: f32) -> vec2<f32> {
-        let atob = vec2f(bx - ax, by - ay);
-        let atop = vec2f(px - ax, py - ay);
-        let len = (atob.x * atob.x) + (atob.y * atob.y);
-        var dot = (atop.x * atob.x) + (atop.y * atob.y);
-        let t = min(1.0, max(0.0, dot / len));
-
-        dot = ((bx - ax) * (py - ay)) - ((by - ay) * (px - ax));
-
-        return vec2f(ax + (atob.x * t), ay + (atob.y * t));
-      }
-
-      fn distanceToLine(a: vec2<f32>, b: vec2<f32>, p: vec2<f32>) -> f32 {
-        let nearest = findNearestPointOnLine(p.x, p.y, a.x, a.y, b.x, b.y);
-        return distance(nearest, p);
+      fn distanceToNearestPointOnLineSegment(p1: vec2<f32>, p2: vec2<f32>, p: vec2<f32>) -> f32 {
+        let v = p2 - p1;
+        let w = p - p1;
+        let c1 = dot(w, v);
+        if (c1 <= 0.0) {
+          return distance(p, p1);
+        }
+        let c2 = dot(v, v);
+        if (c2 <= c1) {
+          return distance(p, p2);
+        }
+        let b = c1 / c2;
+        let pb = p1 + b * v;
+        return distance(p, pb);
       }
     `,
 });
@@ -153,8 +164,18 @@ const pipeline = device.createRenderPipeline({
             },
           },
           {
-            // cells storage
+            // cells ping storage
             binding: 3,
+            visibility: GPUShaderStage.FRAGMENT,
+            buffer: {
+              type: "storage",
+              hasDynamicOffset: 0,
+              minBindingSize: 4,
+            },
+          },
+          {
+            // cells pong storage
+            binding: 4,
             visibility: GPUShaderStage.FRAGMENT,
             buffer: {
               type: "storage",
@@ -178,7 +199,9 @@ const pipeline = device.createRenderPipeline({
 });
 
 let previousPointerPosition = [-2, -2];
+let pingPong = true;
 const render = () => {
+  pingPong = !pingPong;
   pointerUniformValues[2] = previousPointerPosition[0];
   pointerUniformValues[3] = previousPointerPosition[1];
   previousPointerPosition = [pointerUniformValues[0], pointerUniformValues[1]];
@@ -199,7 +222,7 @@ const render = () => {
   });
 
   pass.setPipeline(pipeline);
-  pass.setBindGroup(0, bindGroup);
+  pass.setBindGroup(0, pingPong ? bindGroupPing : bindGroupPong);
   pass.draw(6); // call shader six times (for the six points)
   pass.end();
 
@@ -228,27 +251,47 @@ const pointerUniformBuffer = device.createBuffer({
   usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
 
-pointerUniformValues[0] = -2;
-pointerUniformValues[1] = -2;
-pointerUniformValues[2] = -2;
-pointerUniformValues[3] = -2;
+// pointerUniformValues[0] = -2;
+// pointerUniformValues[1] = -2;
+// pointerUniformValues[2] = -2;
+// pointerUniformValues[3] = -2;
 
 const GRID_SIZE = 100;
-const cellsStorageArray = new Uint32Array(GRID_SIZE * GRID_SIZE);
-const cellsStorageBuffer = device.createBuffer({
-  label: "cell storage buffer",
-  size: cellsStorageArray.byteLength,
+const cellsPingStorageArray = new Uint32Array(GRID_SIZE * GRID_SIZE);
+const cellsPingStorageBuffer = device.createBuffer({
+  label: "cell ping storage buffer",
+  size: cellsPingStorageArray.byteLength,
   usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
 });
 
-const bindGroup = device.createBindGroup({
-  label: "uniform bind group",
+const cellsPongStorageArray = new Uint32Array(GRID_SIZE * GRID_SIZE);
+const cellsPongStorageBuffer = device.createBuffer({
+  label: "cell pong storage buffer",
+  size: cellsPongStorageArray.byteLength,
+  usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+});
+
+const bindGroupPing = device.createBindGroup({
+  label: "uniform bind group ping",
   layout: pipeline.getBindGroupLayout(0),
   entries: [
     { binding: 0, resource: { buffer: canvasUniformBuffer } },
     { binding: 1, resource: { buffer: clockUniformBuffer } },
     { binding: 2, resource: { buffer: pointerUniformBuffer } },
-    { binding: 3, resource: { buffer: cellsStorageBuffer } },
+    { binding: 3, resource: { buffer: cellsPingStorageBuffer } },
+    { binding: 4, resource: { buffer: cellsPongStorageBuffer } },
+  ],
+});
+
+const bindGroupPong = device.createBindGroup({
+  label: "uniform bind group pong",
+  layout: pipeline.getBindGroupLayout(0),
+  entries: [
+    { binding: 0, resource: { buffer: canvasUniformBuffer } },
+    { binding: 1, resource: { buffer: clockUniformBuffer } },
+    { binding: 2, resource: { buffer: pointerUniformBuffer } },
+    { binding: 3, resource: { buffer: cellsPongStorageBuffer } },
+    { binding: 4, resource: { buffer: cellsPingStorageBuffer } },
   ],
 });
 
@@ -275,13 +318,17 @@ addEventListener("pointermove", (event) => {
 
 addEventListener("pointerdown", (event) => {
   pointerUniformValues[4] = 1;
+  pointerUniformValues[0] = event.clientX * devicePixelRatio;
+  pointerUniformValues[1] = event.clientY * devicePixelRatio;
+  previousPointerPosition[0] = pointerUniformValues[0];
+  previousPointerPosition[1] = pointerUniformValues[1];
 });
 
 addEventListener("pointerup", (event) => {
   pointerUniformValues[4] = 0;
 
-  pointerUniformValues[0] = -2;
-  pointerUniformValues[1] = -2;
+  // pointerUniformValues[2] = -2;
+  // pointerUniformValues[3] = -2;
 });
 
 canvas.style.width = "100%";
@@ -298,7 +345,7 @@ const tick = () => {
   requestAnimationFrame(tick);
 };
 
-for (let i = 0; i < cellsStorageArray.length; i++) {
+for (let i = 0; i < cellsPingStorageArray.length; i++) {
   // cellsStorageArray[i] = i % 2 === 0 ? 0 : 1;
 }
 
