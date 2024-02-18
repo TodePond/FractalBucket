@@ -1,25 +1,9 @@
-export {};
+import { getStage } from "./source/stage.js";
 
-const GRID_SIZE = 500;
+const GRID_SIZE = 1000;
+const WORKGROUP_SIZE = 8;
 
-const adapter = await navigator.gpu?.requestAdapter();
-if (!adapter) {
-  alert("Browser doesn't support WebGPU");
-  throw new Error("Browser doesn't support WebGPU");
-}
-const device = await adapter.requestDevice();
-if (!device) {
-  alert("Browser doesn't support WebGPU");
-  throw new Error("Browser doesn't support WebGPU");
-}
-
-const canvas = document.querySelector("canvas");
-if (!canvas) throw new Error("Can't get canvas");
-const context = canvas.getContext("webgpu");
-if (!context) throw new Error("Can't get context");
-
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-context.configure({ device, format: presentationFormat });
+const { device, context, canvas, presentationFormat } = await getStage();
 
 const module = device.createShaderModule({
   label: "shaders",
@@ -60,7 +44,7 @@ const module = device.createShaderModule({
           vec2f( 1.0,  1.0),  // top right
           vec2f(-1.0, -1.0),  // bottom left
         );
- 
+
         var output: VertexOutput;
         output.position = vec4f(pos[vertexIndex], 0.0, 1.0);
         return output;
@@ -70,52 +54,21 @@ const module = device.createShaderModule({
         let position = getPositionFromPixelPosition(pixelPosition);
         return position.x + position.y * ${GRID_SIZE}u;
       }
- 
+
       fn getPositionFromPixelPosition(position: vec2<f32>) -> vec2<u32> {
         let x = u32(position.x / canvas.size.x * ${GRID_SIZE}.0);
         let y = u32(position.y / canvas.size.y * ${GRID_SIZE}.0);
         return vec2(x, y);
       }
 
-      fn behave(index: u32) {
-        let cell = getElementAtIndex(index);
-        let below = getElementAtIndex(index + ${GRID_SIZE}u);
-        let above = getElementAtIndex(index - ${GRID_SIZE}u);
-        
-        cellsPong[index] = cell;
-
-        if (cell == SAND) {
-          if (below == AIR) {
-            cellsPong[index] = AIR;
-          }
-          return;
-        }
-
-        if (above == SAND) {
-          cellsPong[index] = SAND;
-        }
-      }
-
-      const VOID = 99u;
-      const AIR = 0u;
-      const SAND = 1u;
-
-      fn getElementAtIndex(index: u32) -> u32 {
-        if (index >= ${GRID_SIZE * GRID_SIZE}u) {
-          return VOID;
-        }
-
-        return cellsPing[index];
-      }
-
       @fragment fn fragment(input: VertexOutput) -> @location(0) vec4f {
         let red = (sin(clock.frame / 240.0) * 0.5 + 0.5);
         let green = input.position.y / canvas.size.y;
         let blue = input.position.x / canvas.size.x;
-        
+
         let index = getIndexFromPixelPosition(input.position.xy);
-        
-        behave(index);
+
+        cellsPong[index] = cellsPing[index];
 
         if (pointer.down > 0.5) {
           let distanceToPointer = distanceToNearestPointOnLineSegment(pointer.previousPosition, pointer.position, input.position.xy);
@@ -146,6 +99,11 @@ const module = device.createShaderModule({
         let b = c1 / c2;
         let pb = p1 + b * v;
         return distance(p, pb);
+      }
+
+      @compute
+      @workgroup_size(${WORKGROUP_SIZE}, ${WORKGROUP_SIZE})
+      fn compute(@builtin(global_invocation_id) cell: vec3u) {
       }
     `,
 });
