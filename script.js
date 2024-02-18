@@ -65,13 +65,24 @@ const module = device.createShaderModule({
         output.position = vec4f(pos[vertexIndex], 0.0, 1.0);
         return output;
       }
+
+      fn getIndexFromPixelPosition(pixelPosition: vec2<f32>) -> u32 {
+        let position = getPositionFromPixelPosition(pixelPosition);
+        return position.x + position.y * ${GRID_SIZE}u;
+      }
  
+      fn getPositionFromPixelPosition(position: vec2<f32>) -> vec2<u32> {
+        let x = u32(position.x / canvas.size.x * ${GRID_SIZE}.0);
+        let y = u32(position.y / canvas.size.y * ${GRID_SIZE}.0);
+        return vec2(x, y);
+      }
+
       @fragment fn fragment(input: VertexOutput) -> @location(0) vec4f {
         let red = (sin(clock.frame / 240.0) * 0.5 + 0.5);
         let green = input.position.y / canvas.size.y;
         let blue = input.position.x / canvas.size.x;
         
-        let index = u32(input.position.x / canvas.size.x * ${GRID_SIZE}.0) + u32(input.position.y / canvas.size.y * ${GRID_SIZE}.0) * ${GRID_SIZE}u;
+        let index = getIndexFromPixelPosition(input.position.xy);
         
         let cell = cellsPing[index];
         let below = cellsPing[index + ${GRID_SIZE}u];
@@ -109,6 +120,10 @@ const module = device.createShaderModule({
 
         return vec4(red, green, blue, 1.0);
       }
+
+      const VOID = 99u;
+      const AIR = 0u;
+      const SAND = 1u;
 
       fn distanceToNearestPointOnLineSegment(p1: vec2<f32>, p2: vec2<f32>, p: vec2<f32>) -> f32 {
         let v = p2 - p1;
