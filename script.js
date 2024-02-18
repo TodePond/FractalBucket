@@ -77,6 +77,37 @@ const module = device.createShaderModule({
         return vec2(x, y);
       }
 
+      fn behave(index: u32) {
+        let cell = getElementAtIndex(index);
+        let below = getElementAtIndex(index + ${GRID_SIZE}u);
+        let above = getElementAtIndex(index - ${GRID_SIZE}u);
+        
+        cellsPong[index] = cell;
+
+        if (cell == SAND) {
+          if (below == AIR) {
+            cellsPong[index] = AIR;
+          }
+          return;
+        }
+
+        if (above == SAND) {
+          cellsPong[index] = SAND;
+        }
+      }
+
+      const VOID = 99u;
+      const AIR = 0u;
+      const SAND = 1u;
+
+      fn getElementAtIndex(index: u32) -> u32 {
+        if (index >= ${GRID_SIZE * GRID_SIZE}u) {
+          return VOID;
+        }
+
+        return cellsPing[index];
+      }
+
       @fragment fn fragment(input: VertexOutput) -> @location(0) vec4f {
         let red = (sin(clock.frame / 240.0) * 0.5 + 0.5);
         let green = input.position.y / canvas.size.y;
@@ -84,27 +115,7 @@ const module = device.createShaderModule({
         
         let index = getIndexFromPixelPosition(input.position.xy);
         
-        let cell = cellsPing[index];
-        let below = cellsPing[index + ${GRID_SIZE}u];
-        let above = cellsPing[index - ${GRID_SIZE}u];
-        
-        cellsPong[index] = cell;
-
-        if (cell == 1u) {
-          if (index + ${GRID_SIZE}u < ${GRID_SIZE * GRID_SIZE}u) {
-            if (below == 0u) {
-              cellsPong[index] = 0u;
-            }
-          }
-        }
-
-        if (cell == 0u) {
-          if (index - ${GRID_SIZE}u < ${GRID_SIZE * GRID_SIZE}u) {
-            if (above == 1u) {
-              cellsPong[index] = 1u;
-            }
-          }
-        }
+        behave(index);
 
         if (pointer.down > 0.5) {
           let distanceToPointer = distanceToNearestPointOnLineSegment(pointer.previousPosition, pointer.position, input.position.xy);
@@ -120,10 +131,6 @@ const module = device.createShaderModule({
 
         return vec4(red, green, blue, 1.0);
       }
-
-      const VOID = 99u;
-      const AIR = 0u;
-      const SAND = 1u;
 
       fn distanceToNearestPointOnLineSegment(p1: vec2<f32>, p2: vec2<f32>, p: vec2<f32>) -> f32 {
         let v = p2 - p1;
