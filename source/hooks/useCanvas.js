@@ -13,7 +13,7 @@ export function useCanvas() {
     canvas.height = window.innerHeight * window.devicePixelRatio;
   };
 
-  canvas.addEventListener("resize", handleResize);
+  window.addEventListener("resize", handleResize);
   handleResize();
 
   cached = canvas;

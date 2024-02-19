@@ -22,6 +22,6 @@ export async function useWindow() {
     render();
   };
 
-  addEventListener("resize", handleResize);
+  window.addEventListener("resize", handleResize);
   handleResize();
 }
