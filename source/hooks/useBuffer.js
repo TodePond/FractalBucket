@@ -35,6 +35,13 @@ async function getBuffers() {
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
+  const elementsStorageValues = new Uint32Array(GRID_SIZE * GRID_SIZE);
+  const elementsStorageBuffer = device.createBuffer({
+    label: "elements storage buffer",
+    size: elementsStorageValues.byteLength,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+  });
+
   return {
     canvas: {
       values: canvasUniformValues,
@@ -47,6 +54,10 @@ async function getBuffers() {
     pointer: {
       values: pointerUniformValues,
       buffer: pointerUniformBuffer,
+    },
+    elements: {
+      values: elementsStorageValues,
+      buffer: elementsStorageBuffer,
     },
   };
 }

@@ -39,7 +39,7 @@ function getModule(device) {
       };
 
       struct VertexOutput {
-        @builtin(position) position : vec4<f32>,
+        @builtin(position) pixelPosition : vec4<f32>,
       };
 
       //==========//
@@ -48,10 +48,11 @@ function getModule(device) {
       @group(0) @binding(1) var<uniform> clock: Clock;
       @group(0) @binding(0) var<uniform> canvas: Canvas;
       @group(0) @binding(2) var<uniform> pointer: Pointer;
+      @group(0) @binding(3) var<storage, read_write> elements: array<u32>;
 
-      //===============//
-      // VERTEX SHADER //
-      //===============//
+      //========//
+      // VERTEX //
+      //========//
       @vertex fn vertex(
         @builtin(vertex_index) vertexIndex: u32
       ) -> VertexOutput {
@@ -66,7 +67,7 @@ function getModule(device) {
         );
 
         var output: VertexOutput;
-        output.position = vec4f(pos[vertexIndex], 0.0, 1.0);
+        output.pixelPosition = vec4f(pos[vertexIndex], 0.0, 1.0);
         return output;
       }
 
@@ -75,9 +76,14 @@ function getModule(device) {
       //==========//
       @fragment fn fragment(input: VertexOutput) -> @location(0) vec4f {
         let red = (sin(clock.frame / 240.0) * 0.5 + 0.5);
-        let green = input.position.y / canvas.size.y;
-        let blue = input.position.x / canvas.size.x;
+        let green = input.pixelPosition.y / canvas.size.y;
+        let blue = input.pixelPosition.x / canvas.size.x;
 
+        let gridIndex = getGridIndexFromPixelPosition(input.pixelPosition.xy);
+        let element = elements[gridIndex];
+        if (element == 1u) {
+          return vec4(green, blue, red, 1.0);
+        }
         return vec4(red, green, blue, 1.0);
       }
 
@@ -86,9 +92,34 @@ function getModule(device) {
       //=========//
       @compute
       @workgroup_size(${WORKGROUP_SIZE}, ${WORKGROUP_SIZE})
-      fn compute(@builtin(global_invocation_id) cell: vec3u) {
-      
+      fn compute(@builtin(global_invocation_id) gridPosition: vec3u) {
+        let gridIndex = getGridIndexFromGridPosition(gridPosition.xy);
+        let element = elements[gridIndex];
+        if (element == 0u) {
+          elements[gridIndex] = 1u;
+        } else {
+          elements[gridIndex] = 0u;
+        }
       }
+
+      //=========//
+      // HELPERS //
+      //=========//
+      fn getGridIndexFromPixelPosition(pixelPosition: vec2<f32>) -> u32 {
+        let gridPosition = getGridPositionFromPixelPosition(pixelPosition);
+        return getGridIndexFromGridPosition(gridPosition);
+      }
+
+      fn getGridPositionFromPixelPosition(position: vec2<f32>) -> vec2<u32> {
+        let x = u32(position.x / canvas.size.x * ${GRID_SIZE}.0);
+        let y = u32(position.y / canvas.size.y * ${GRID_SIZE}.0);
+        return vec2(x, y);
+      }
+
+      fn getGridIndexFromGridPosition(gridPosition: vec2<u32>) -> u32 {
+        return gridPosition.x + gridPosition.y * ${GRID_SIZE}u;
+      }
+
       `,
   });
 }

@@ -24,6 +24,7 @@ async function getBindGroup() {
       { binding: 0, resource: { buffer: buffer.canvas.buffer } },
       { binding: 1, resource: { buffer: buffer.clock.buffer } },
       { binding: 2, resource: { buffer: buffer.pointer.buffer } },
+      { binding: 3, resource: { buffer: buffer.elements.buffer } },
     ],
   });
 
