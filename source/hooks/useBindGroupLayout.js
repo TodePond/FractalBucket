@@ -17,19 +17,19 @@ async function getBindGroupLayout() {
       {
         // canvas uniform
         binding: 0,
-        visibility: GPUShaderStage.FRAGMENT,
+        visibility: GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE,
         buffer: { type: "uniform" },
       },
       {
         // clock uniform
         binding: 1,
-        visibility: GPUShaderStage.FRAGMENT,
+        visibility: GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE,
         buffer: { type: "uniform" },
       },
       {
         // pointer uniform
         binding: 2,
-        visibility: GPUShaderStage.FRAGMENT,
+        visibility: GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE,
         buffer: { type: "uniform" },
       },
       {

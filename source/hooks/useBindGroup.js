@@ -1,6 +1,6 @@
 import { useBuffer } from "./useBuffer.js";
 import { useDevice } from "./useDevice.js";
-import { usePipeline } from "./usePipeline.js";
+import { useRenderPipeline } from "./useRenderPipeline.js";
 
 /** @type {GPUBindGroup | null} */
 let cached = null;
@@ -14,7 +14,7 @@ export async function useBindGroup() {
 
 async function getBindGroup() {
   const device = await useDevice();
-  const pipeline = await usePipeline();
+  const pipeline = await useRenderPipeline();
   const buffer = await useBuffer();
 
   const bindGroup = device.createBindGroup({

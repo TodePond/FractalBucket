@@ -1,5 +1,6 @@
 import { useBindGroupLayout } from "./useBindGroupLayout.js";
 import { useModule } from "./useModule.js";
+import { usePipelineLayout } from "./usePipelineLayout.js";
 import { useStage } from "./useStage.js";
 
 /**
@@ -7,19 +8,15 @@ import { useStage } from "./useStage.js";
  */
 let cached = null;
 
-export async function usePipeline() {
+export async function useRenderPipeline() {
   if (cached) return cached;
   const { device, format } = await useStage();
   const module = await useModule();
-  const bindGroupLayout = await useBindGroupLayout();
+  const pipelineLayout = await usePipelineLayout();
 
   cached = device.createRenderPipeline({
     label: "pipeline",
-    //"auto",
-    layout: device.createPipelineLayout({
-      label: "pipeline layout",
-      bindGroupLayouts: [bindGroupLayout],
-    }),
+    layout: pipelineLayout,
     vertex: {
       module,
       entryPoint: "vertex",

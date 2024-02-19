@@ -1,8 +1,10 @@
+import { GRID_SIZE, WORKGROUP_SIZE } from "../constants.js";
 import { useBindGroup } from "./useBindGroup.js";
 import { useBuffer } from "./useBuffer.js";
+import { useComputePipeline } from "./useComputePipeline.js";
 import { useContext } from "./useContext.js";
 import { useDevice } from "./useDevice.js";
-import { usePipeline } from "./usePipeline.js";
+import { useRenderPipeline } from "./useRenderPipeline.js";
 
 let previousPointerPosition = [-2, -2];
 
@@ -13,7 +15,8 @@ export async function useRender() {
   if (cached) return cached;
   const buffer = await useBuffer();
   const device = await useDevice();
-  const pipeline = await usePipeline();
+  const renderPipeline = await useRenderPipeline();
+  const computePipeline = await useComputePipeline();
   const context = await useContext();
   const pointerUniformValues = buffer.pointer.values;
   const pointerUniformBuffer = buffer.pointer.buffer;
@@ -30,7 +33,14 @@ export async function useRender() {
 
     const encoder = device.createCommandEncoder({ label: "encoder" });
 
-    const pass = encoder.beginRenderPass({
+    const computePass = encoder.beginComputePass();
+    computePass.setPipeline(computePipeline);
+    computePass.setBindGroup(0, bindGroup);
+    const workgroupCount = Math.ceil(GRID_SIZE / WORKGROUP_SIZE);
+    computePass.dispatchWorkgroups(workgroupCount, workgroupCount);
+    computePass.end();
+
+    const renderPass = encoder.beginRenderPass({
       label: "render pass",
       colorAttachments: [
         {
@@ -41,10 +51,10 @@ export async function useRender() {
       ],
     });
 
-    pass.setPipeline(pipeline);
-    pass.setBindGroup(0, bindGroup);
-    pass.draw(6); // call shader six times (for the six points)
-    pass.end();
+    renderPass.setPipeline(renderPipeline);
+    renderPass.setBindGroup(0, bindGroup);
+    renderPass.draw(6); // call shader six times (for the six points)
+    renderPass.end();
 
     const commandBuffer = encoder.finish();
     device.queue.submit([commandBuffer]);

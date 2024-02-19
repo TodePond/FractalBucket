@@ -94,12 +94,14 @@ function getModule(device) {
       @workgroup_size(${WORKGROUP_SIZE}, ${WORKGROUP_SIZE})
       fn compute(@builtin(global_invocation_id) gridPosition: vec3u) {
         let gridIndex = getGridIndexFromGridPosition(gridPosition.xy);
-        let element = elements[gridIndex];
-        if (element == 0u) {
-          elements[gridIndex] = 1u;
-        } else {
-          elements[gridIndex] = 0u;
+        
+        if (pointer.down > 0.5) {
+          let pointerGridIndex = getGridIndexFromPixelPosition(pointer.position);
+          if (pointerGridIndex == gridIndex) {
+            elements[gridIndex] = 1u;
+          }
         }
+        
       }
 
       //=========//
