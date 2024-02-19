@@ -95,6 +95,16 @@ function getModule(device) {
       fn compute(@builtin(global_invocation_id) gridPosition: vec3u) {
         let gridIndex = getGridIndexFromGridPosition(gridPosition.xy);
         
+        if (getElementAtGridPosition(gridPosition.xy + RIGHT) == FORKBOMB) {
+          setElementAtGridPosition(gridPosition.xy, FORKBOMB);
+        } else if (getElementAtGridPosition(gridPosition.xy - RIGHT) == FORKBOMB) {
+          setElementAtGridPosition(gridPosition.xy, FORKBOMB);
+        } else if (getElementAtGridPosition(gridPosition.xy + UP) == FORKBOMB) {
+          setElementAtGridPosition(gridPosition.xy, FORKBOMB);
+        } else if (getElementAtGridPosition(gridPosition.xy - UP) == FORKBOMB) {
+          setElementAtGridPosition(gridPosition.xy, FORKBOMB);
+        }
+
         if (pointer.down > 0.5) {
           let pointerGridIndex = getGridIndexFromPixelPosition(pointer.position);
           if (pointerGridIndex == gridIndex) {
@@ -107,6 +117,29 @@ function getModule(device) {
       //=========//
       // HELPERS //
       //=========//
+      const VOID = 99u;
+      const AIR = 0u;
+      const FORKBOMB = 1u;
+
+      const RIGHT = vec2(1, 0);
+      const UP = vec2(0, 1);
+
+      fn getElementAtGridPosition(gridPosition: vec2<u32>) -> u32 {
+        if (gridPosition.x >= ${GRID_SIZE}u || gridPosition.y >= ${GRID_SIZE}u) {
+          return VOID;
+        }
+        let gridIndex = getGridIndexFromGridPosition(gridPosition);
+        return elements[gridIndex];
+      }
+
+      fn setElementAtGridPosition(gridPosition: vec2<u32>, value: u32) {
+        if (gridPosition.x >= ${GRID_SIZE}u || gridPosition.y >= ${GRID_SIZE}u) {
+          return;
+        }
+        let gridIndex = getGridIndexFromGridPosition(gridPosition);
+        elements[gridIndex] = value;
+      }
+
       fn getGridIndexFromPixelPosition(pixelPosition: vec2<f32>) -> u32 {
         let gridPosition = getGridPositionFromPixelPosition(pixelPosition);
         return getGridIndexFromGridPosition(gridPosition);
