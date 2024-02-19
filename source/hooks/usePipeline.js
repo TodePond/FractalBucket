@@ -48,26 +48,6 @@ export async function usePipeline() {
                 minBindingSize: 24,
               },
             },
-            {
-              // cells ping storage
-              binding: 3,
-              visibility: GPUShaderStage.FRAGMENT,
-              buffer: {
-                type: "storage",
-                hasDynamicOffset: 0,
-                minBindingSize: 4,
-              },
-            },
-            {
-              // cells pong storage
-              binding: 4,
-              visibility: GPUShaderStage.FRAGMENT,
-              buffer: {
-                type: "storage",
-                hasDynamicOffset: 0,
-                minBindingSize: 4,
-              },
-            },
           ],
         }),
       ],

@@ -5,7 +5,6 @@ import { useDevice } from "./useDevice.js";
 import { usePipeline } from "./usePipeline.js";
 
 let previousPointerPosition = [-2, -2];
-let pingPong = true;
 
 /** @type {(() => void) | null} */
 let cached = null;
@@ -19,11 +18,8 @@ export async function useRender() {
   const pointerUniformValues = buffer.pointer.values;
   const pointerUniformBuffer = buffer.pointer.buffer;
   const bindGroup = await useBindGroup();
-  const bindGroupPing = bindGroup.ping;
-  const bindGroupPong = bindGroup.pong;
 
   function render() {
-    pingPong = !pingPong;
     pointerUniformValues[2] = previousPointerPosition[0];
     pointerUniformValues[3] = previousPointerPosition[1];
     previousPointerPosition = [
@@ -31,7 +27,6 @@ export async function useRender() {
       pointerUniformValues[1],
     ];
     device.queue.writeBuffer(pointerUniformBuffer, 0, pointerUniformValues);
-    // device.queue.writeBuffer(cellsStorageBuffer, 0, cellsStorageArray);
 
     const encoder = device.createCommandEncoder({ label: "encoder" });
 
@@ -47,7 +42,7 @@ export async function useRender() {
     });
 
     pass.setPipeline(pipeline);
-    pass.setBindGroup(0, pingPong ? bindGroupPing : bindGroupPong);
+    pass.setBindGroup(0, bindGroup);
     pass.draw(6); // call shader six times (for the six points)
     pass.end();
 

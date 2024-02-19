@@ -35,25 +35,6 @@ async function getBuffers() {
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
-  // pointerUniformValues[0] = -2;
-  // pointerUniformValues[1] = -2;
-  // pointerUniformValues[2] = -2;
-  // pointerUniformValues[3] = -2;
-
-  const cellsPingStorageArray = new Uint32Array(GRID_SIZE * GRID_SIZE);
-  const cellsPingStorageBuffer = device.createBuffer({
-    label: "cell ping storage buffer",
-    size: cellsPingStorageArray.byteLength,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-  });
-
-  const cellsPongStorageArray = new Uint32Array(GRID_SIZE * GRID_SIZE);
-  const cellsPongStorageBuffer = device.createBuffer({
-    label: "cell pong storage buffer",
-    size: cellsPongStorageArray.byteLength,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-  });
-
   return {
     canvas: {
       values: canvasUniformValues,
@@ -66,14 +47,6 @@ async function getBuffers() {
     pointer: {
       values: pointerUniformValues,
       buffer: pointerUniformBuffer,
-    },
-    cellsPing: {
-      array: cellsPingStorageArray,
-      buffer: cellsPingStorageBuffer,
-    },
-    cellsPong: {
-      array: cellsPongStorageArray,
-      buffer: cellsPongStorageBuffer,
     },
   };
 }
