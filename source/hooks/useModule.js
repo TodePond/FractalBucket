@@ -48,7 +48,7 @@ function getModule(device) {
       @group(0) @binding(1) var<uniform> clock: Clock;
       @group(0) @binding(0) var<uniform> canvas: Canvas;
       @group(0) @binding(2) var<uniform> pointer: Pointer;
-      @group(0) @binding(3) var<storage, read_write> elements: array<u32>;
+      @group(0) @binding(3) var<storage, read_write> elements: array<i32>;
 
       //========//
       // VERTEX //
@@ -81,7 +81,7 @@ function getModule(device) {
 
         let gridIndex = getGridIndexFromPixelPosition(input.pixelPosition.xy);
         let element = elements[gridIndex];
-        if (element == 1u) {
+        if (element == 1) {
           return vec4(green, blue, red, 1.0);
         }
         return vec4(red, green, blue, 1.0);
@@ -93,22 +93,28 @@ function getModule(device) {
       @compute
       @workgroup_size(${WORKGROUP_SIZE}, ${WORKGROUP_SIZE})
       fn compute(@builtin(global_invocation_id) gridPosition: vec3u) {
-        let gridIndex = getGridIndexFromGridPosition(gridPosition.xy);
+        let position = vec2i(gridPosition.xy);
+        let gridIndex = getGridIndexFromGridPosition(position);
         
-        if (getElementAtGridPosition(gridPosition.xy + RIGHT) == FORKBOMB) {
-          setElementAtGridPosition(gridPosition.xy, FORKBOMB);
-        } else if (getElementAtGridPosition(gridPosition.xy - RIGHT) == FORKBOMB) {
-          setElementAtGridPosition(gridPosition.xy, FORKBOMB);
-        } else if (getElementAtGridPosition(gridPosition.xy + UP) == FORKBOMB) {
-          setElementAtGridPosition(gridPosition.xy, FORKBOMB);
-        } else if (getElementAtGridPosition(gridPosition.xy - UP) == FORKBOMB) {
-          setElementAtGridPosition(gridPosition.xy, FORKBOMB);
+        let right = getElementAtGridPosition(position + RIGHT);
+        let left = getElementAtGridPosition(position + LEFT);
+        let up = getElementAtGridPosition(position + UP);
+        let down = getElementAtGridPosition(position + DOWN);
+
+        if (right == FORKBOMB) {
+          setElementAtGridPosition(position, FORKBOMB);
+        } else if (left == FORKBOMB) {
+          setElementAtGridPosition(position, FORKBOMB);
+        } else if (up == FORKBOMB) {
+          setElementAtGridPosition(position, FORKBOMB);
+        } else if (down == FORKBOMB) {
+          setElementAtGridPosition(position, FORKBOMB);
         }
 
         if (pointer.down > 0.5) {
           let pointerGridIndex = getGridIndexFromPixelPosition(pointer.position);
           if (pointerGridIndex == gridIndex) {
-            elements[gridIndex] = 1u;
+            elements[gridIndex] = 1;
           }
         }
         
@@ -117,42 +123,44 @@ function getModule(device) {
       //=========//
       // HELPERS //
       //=========//
-      const VOID = 99u;
-      const AIR = 0u;
-      const FORKBOMB = 1u;
+      const VOID = 99;
+      const AIR = 0;
+      const FORKBOMB = 1;
 
+      const LEFT = vec2(-1, 0);
       const RIGHT = vec2(1, 0);
       const UP = vec2(0, 1);
+      const DOWN = vec2(0, -1);
 
-      fn getElementAtGridPosition(gridPosition: vec2<u32>) -> u32 {
-        if (gridPosition.x >= ${GRID_SIZE}u || gridPosition.y >= ${GRID_SIZE}u) {
+      fn getElementAtGridPosition(gridPosition: vec2<i32>) -> i32 {
+        if (gridPosition.x >= ${GRID_SIZE}i || gridPosition.y >= ${GRID_SIZE}i) {
           return VOID;
         }
         let gridIndex = getGridIndexFromGridPosition(gridPosition);
         return elements[gridIndex];
       }
 
-      fn setElementAtGridPosition(gridPosition: vec2<u32>, value: u32) {
-        if (gridPosition.x >= ${GRID_SIZE}u || gridPosition.y >= ${GRID_SIZE}u) {
+      fn setElementAtGridPosition(gridPosition: vec2<i32>, value: i32) {
+        if (gridPosition.x >= ${GRID_SIZE}i || gridPosition.y >= ${GRID_SIZE}i) {
           return;
         }
         let gridIndex = getGridIndexFromGridPosition(gridPosition);
         elements[gridIndex] = value;
       }
 
-      fn getGridIndexFromPixelPosition(pixelPosition: vec2<f32>) -> u32 {
+      fn getGridIndexFromPixelPosition(pixelPosition: vec2<f32>) -> i32 {
         let gridPosition = getGridPositionFromPixelPosition(pixelPosition);
         return getGridIndexFromGridPosition(gridPosition);
       }
 
-      fn getGridPositionFromPixelPosition(position: vec2<f32>) -> vec2<u32> {
-        let x = u32(position.x / canvas.size.x * ${GRID_SIZE}.0);
-        let y = u32(position.y / canvas.size.y * ${GRID_SIZE}.0);
+      fn getGridPositionFromPixelPosition(position: vec2<f32>) -> vec2<i32> {
+        let x = i32(position.x / canvas.size.x * ${GRID_SIZE}.0);
+        let y = i32(position.y / canvas.size.y * ${GRID_SIZE}.0);
         return vec2(x, y);
       }
 
-      fn getGridIndexFromGridPosition(gridPosition: vec2<u32>) -> u32 {
-        return gridPosition.x + gridPosition.y * ${GRID_SIZE}u;
+      fn getGridIndexFromGridPosition(gridPosition: vec2<i32>) -> i32 {
+        return gridPosition.x + gridPosition.y * ${GRID_SIZE}i;
       }
 
       `,
