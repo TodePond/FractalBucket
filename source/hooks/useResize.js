@@ -5,7 +5,7 @@ import { useRender } from "./useRender.js";
 
 let done = false;
 
-export async function useWindow() {
+export async function useResize() {
   if (done) return;
   done = true;
   const buffer = await useBuffer();

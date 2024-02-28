@@ -1,5 +1,5 @@
 import { GRID_SIZE, WORKGROUP_SIZE } from "../constants.js";
-import { useStage } from "./useStage.js";
+import { useDevice } from "./useDevice.js";
 
 /**
  * @type {GPUShaderModule | null}
@@ -8,7 +8,7 @@ let cached = null;
 
 export async function useModule() {
   if (cached) return cached;
-  const { device } = await useStage();
+  const device = await useDevice();
   const module = getModule(device);
   cached = module;
   return cached;

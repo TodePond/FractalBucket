@@ -1,7 +1,7 @@
-import { useBindGroupLayout } from "./useBindGroupLayout.js";
+import { useDevice } from "./useDevice.js";
+import { useFormat } from "./useFormat.js";
 import { useModule } from "./useModule.js";
 import { usePipelineLayout } from "./usePipelineLayout.js";
-import { useStage } from "./useStage.js";
 
 /**
  * @type {GPURenderPipeline | null}
@@ -10,7 +10,8 @@ let cached = null;
 
 export async function useRenderPipeline() {
   if (cached) return cached;
-  const { device, format } = await useStage();
+  const device = await useDevice();
+  const format = useFormat();
   const module = await useModule();
   const pipelineLayout = await usePipelineLayout();
 

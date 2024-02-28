@@ -1,9 +1,12 @@
+import { useConfiguration } from "./source/hooks/useConfiguration.js";
 import { usePointer } from "./source/hooks/usePointer.js";
 import { useTick } from "./source/hooks/useTick.js";
-import { useWindow } from "./source/hooks/useWindow.js";
+import { useResize } from "./source/hooks/useResize.js";
 
-await useWindow();
+await useConfiguration();
+await useResize();
 await usePointer();
+
 const tick = await useTick();
 
 tick();
