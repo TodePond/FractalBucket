@@ -96,24 +96,27 @@ function getModule(device) {
         let position = vec2i(gridPosition.xy);
         let gridIndex = getGridIndexFromGridPosition(position);
         
+        let element = getElementAtGridPosition(position);
         let right = getElementAtGridPosition(position + RIGHT);
         let left = getElementAtGridPosition(position + LEFT);
         let up = getElementAtGridPosition(position + UP);
         let down = getElementAtGridPosition(position + DOWN);
 
-        if (right == FORKBOMB) {
-          setElementAtGridPosition(position, FORKBOMB);
-        } else if (left == FORKBOMB) {
-          setElementAtGridPosition(position, FORKBOMB);
-        } else if (up == FORKBOMB) {
-          setElementAtGridPosition(position, FORKBOMB);
-        } else if (down == FORKBOMB) {
-          setElementAtGridPosition(position, FORKBOMB);
+        if (element == AIR) {
+          if (up == SAND) {
+            setElementAtGridPosition(position, SAND);
+          }
+        }
+
+        if (element == SAND) {
+          if (down == AIR) {
+            setElementAtGridPosition(position, AIR);
+          }
         }
 
         if (pointer.down > 0.5) {
-          let pointerGridIndex = getGridIndexFromPixelPosition(pointer.position);
-          if (pointerGridIndex == gridIndex) {
+          let pixelPosition = getPixelPositionFromGridPosition(position);
+          if (distance(pointer.position, pixelPosition) < 100.0) {
             elements[gridIndex] = 1;
           }
         }
@@ -125,12 +128,12 @@ function getModule(device) {
       //=========//
       const VOID = 99;
       const AIR = 0;
-      const FORKBOMB = 1;
+      const SAND = 1;
 
       const LEFT = vec2(-1, 0);
       const RIGHT = vec2(1, 0);
-      const UP = vec2(0, 1);
-      const DOWN = vec2(0, -1);
+      const UP = vec2(0, -1);
+      const DOWN = vec2(0, 1);
 
       fn getElementAtGridPosition(gridPosition: vec2<i32>) -> i32 {
         if (gridPosition.x >= ${GRID_SIZE}i || gridPosition.y >= ${GRID_SIZE}i) {
@@ -161,6 +164,12 @@ function getModule(device) {
 
       fn getGridIndexFromGridPosition(gridPosition: vec2<i32>) -> i32 {
         return gridPosition.x + gridPosition.y * ${GRID_SIZE}i;
+      }
+
+      fn getPixelPositionFromGridPosition(gridPosition: vec2<i32>) -> vec2<f32> {
+        let x = f32(gridPosition.x) / ${GRID_SIZE}.0 * canvas.size.x;
+        let y = f32(gridPosition.y) / ${GRID_SIZE}.0 * canvas.size.y;
+        return vec2(x, y);
       }
 
       `,
