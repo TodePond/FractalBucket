@@ -15,10 +15,14 @@ export async function useTick() {
   const render = await useRender();
 
   const tick = () => {
-    clockUniformValues[0] = frame;
-    device.queue.writeBuffer(clockUniformBuffer, 0, clockUniformValues);
-    frame++;
-    render();
+    let i = 0;
+    while (i < 10) {
+      clockUniformValues[0] = frame;
+      device.queue.writeBuffer(clockUniformBuffer, 0, clockUniformValues);
+      frame++;
+      render();
+      i++;
+    }
     requestAnimationFrame(tick);
   };
 

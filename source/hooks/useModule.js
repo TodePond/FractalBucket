@@ -1,4 +1,5 @@
-import { GRID_SIZE, WORKGROUP_SIZE } from "../constants.js";
+import { SHADES, toShaderVector } from "../../libraries/habitat.js";
+import { BRUSH_SIZE, GRID_SIZE, WORKGROUP_SIZE } from "../constants.js";
 import { useDevice } from "./useDevice.js";
 
 /**
@@ -80,11 +81,15 @@ function getModule(device) {
         let blue = input.pixelPosition.x / canvas.size.x;
 
         let gridIndex = getGridIndexFromPixelPosition(input.pixelPosition.xy);
-        let element = elements[gridIndex];
-        if (element == 1) {
-          return vec4(green, blue, red, 1.0);
+        let gridPosition = getGridPositionFromPixelPosition(input.pixelPosition.xy);
+        let element = getElementAtGridPosition(gridPosition + UP);
+        if (element == PIPE) {
+          if (isGridPositionTouchingElement(gridPosition, AIR)) {
+            return vec4(${toShaderVector(SHADES[10])});
+          }
+          return vec4(${toShaderVector(SHADES[5])});
         }
-        return vec4(red, green, blue, 1.0);
+        return vec4(${toShaderVector(SHADES[1])});
       }
 
       //=========//
@@ -102,23 +107,26 @@ function getModule(device) {
         let up = getElementAtGridPosition(position + UP);
         let down = getElementAtGridPosition(position + DOWN);
 
-        if (element == AIR) {
-          if (up == SAND) {
-            setElementAtGridPosition(position, SAND);
-          }
-        }
+        // if (pointer.down > 0.5) {
+        //   let pixelPosition = getPixelPositionFromGridPosition(position);
+        //   if (distance(pointer.position, pixelPosition) < 100.0) {
+        //     elements[gridIndex] = 1;
+        //   }
+        // }
 
-        if (element == SAND) {
-          if (down == AIR) {
-            setElementAtGridPosition(position, AIR);
-          }
-        }
+        let pixelPosition = getPixelPositionFromGridPosition(position);
 
         if (pointer.down > 0.5) {
-          let pixelPosition = getPixelPositionFromGridPosition(position);
-          if (distance(pointer.position, pixelPosition) < 100.0) {
+          let distanceToPointer = distance(pixelPosition, pointer.position);
+          if (distanceToPointer < ${BRUSH_SIZE}) {
             elements[gridIndex] = 1;
           }
+          
+          let distanceToPointerLine = distanceToLine(pointer.previousPosition, pointer.position, pixelPosition);
+          if (distanceToPointerLine < ${BRUSH_SIZE}) {
+            elements[gridIndex] = 1;
+          }
+          
         }
         
       }
@@ -128,19 +136,37 @@ function getModule(device) {
       //=========//
       const VOID = 99;
       const AIR = 0;
-      const SAND = 1;
+      const PIPE = 1;
 
+      const CENTER = vec2(0, 0);
       const LEFT = vec2(-1, 0);
       const RIGHT = vec2(1, 0);
       const UP = vec2(0, -1);
       const DOWN = vec2(0, 1);
 
       fn getElementAtGridPosition(gridPosition: vec2<i32>) -> i32 {
-        if (gridPosition.x >= ${GRID_SIZE}i || gridPosition.y >= ${GRID_SIZE}i) {
+        if (gridPosition.x >= ${GRID_SIZE}i - 1 || gridPosition.y >= ${GRID_SIZE}i) {
           return VOID;
         }
+        
         let gridIndex = getGridIndexFromGridPosition(gridPosition);
         return elements[gridIndex];
+      }
+
+      fn isGridPositionTouchingElement(gridPosition: vec2<i32>, element: i32) -> bool {
+        // let up = getElementAtGridPosition(gridPosition + UP);
+        // if (up == element) {
+        //   return true;
+        // }
+        let down = getElementAtGridPosition(gridPosition + DOWN);
+        if (down == element) {
+          return true;
+        }
+        let right = getElementAtGridPosition(gridPosition + RIGHT);
+        if (right == element) {
+          return true;
+        }
+        return false;
       }
 
       fn setElementAtGridPosition(gridPosition: vec2<i32>, value: i32) {
@@ -170,6 +196,23 @@ function getModule(device) {
         let x = f32(gridPosition.x) / ${GRID_SIZE}.0 * canvas.size.x;
         let y = f32(gridPosition.y) / ${GRID_SIZE}.0 * canvas.size.y;
         return vec2(x, y);
+      }
+
+      fn findNearestPointOnLine(px: f32, py: f32, ax: f32, ay: f32, bx: f32, by: f32) -> vec2<f32> {
+        let atob = vec2f(bx - ax, by - ay);
+        let atop = vec2f(px - ax, py - ay);
+        let len = (atob.x * atob.x) + (atob.y * atob.y);
+        var dot = (atop.x * atob.x) + (atop.y * atob.y);
+        let t = min(1.0, max(0.0, dot / len));
+
+        dot = ((bx - ax) * (py - ay)) - ((by - ay) * (px - ax));
+
+        return vec2f(ax + (atob.x * t), ay + (atob.y * t));
+      }
+
+      fn distanceToLine(a: vec2<f32>, b: vec2<f32>, p: vec2<f32>) -> f32 {
+        let nearest = findNearestPointOnLine(p.x, p.y, a.x, a.y, b.x, b.y);
+        return distance(nearest, p);
       }
 
       `,
