@@ -38,6 +38,12 @@ async function getBindGroupLayout() {
         visibility: GPUShaderStage.COMPUTE | GPUShaderStage.FRAGMENT,
         buffer: { type: "storage" },
       },
+      {
+        // paints storage
+        binding: 4,
+        visibility: GPUShaderStage.COMPUTE | GPUShaderStage.FRAGMENT,
+        buffer: { type: "storage" },
+      },
     ],
   });
 }

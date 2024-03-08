@@ -56,6 +56,7 @@ function getModule(device) {
       @group(0) @binding(0) var<uniform> canvas: Canvas;
       @group(0) @binding(2) var<uniform> pointer: Pointer;
       @group(0) @binding(3) var<storage, read_write> elements: array<i32>;
+      @group(0) @binding(4) var<storage, read_write> paints: array<f32>;
 
       //========//
       // VERTEX //
@@ -89,13 +90,16 @@ function getModule(device) {
         let gridIndex = getGridIndexFromPixelPosition(input.pixelPosition.xy);
         let gridPosition = getGridPositionFromPixelPosition(input.pixelPosition.xy);
         let element = getElementAtGridPosition(gridPosition);
+        let paint = paints[gridIndex];
         if (element == PIPE) {
-          if (isGridPositionTouchingElement(gridPosition, AIR)) {
+          if (isGridPositionTouchingElementShadow(gridPosition, EMPTY)) {
             return vec4(${toShaderVector(SHADES[10])});
           }
-          return vec4(${toShaderVector(SHADES[5])});
+          let colour = vec4(${toShaderVector(SHADES[5])});
+          return vec4(colour.r, colour.g + paint / 2.0, colour.b + paint, 1.0);
         }
-        return vec4(${toShaderVector(SHADES[2])});
+        let colour = vec4(${toShaderVector(SHADES[2])});
+        return vec4(colour.r, colour.g + paint / 2.0, colour.b + paint, 1.0);
       }
 
       //=========//
@@ -115,27 +119,49 @@ function getModule(device) {
 
         let pixelPosition = getPixelPositionFromGridPosition(position);
 
+        if (element == PIPE) {
+          let maxPaint = getNeighbouringMaxPaint(position);
+          let paint = paints[gridIndex];
+          if (maxPaint > paint) {
+            let difference = maxPaint - paint;
+            paints[gridIndex] = paint + difference * 0.1;
+          }
+        }
+
         if (pointer.down > 0.5) {
           let distanceToPointer = distance(pixelPosition, pointer.position);
           if (distanceToPointer < pointer.size * ${BRUSH_SIZE_MODIFIER}) {
-            elements[gridIndex] = i32(pointer.tool);
+            // applyBrushToGridIndex(gridIndex);
           }
           
           let distanceToPointerLine = distanceToLine(pointer.previousPosition, pointer.position, pixelPosition);
           if (distanceToPointerLine < pointer.size * ${BRUSH_SIZE_MODIFIER}) {
-            elements[gridIndex] = i32(pointer.tool);
+            applyBrushToGridIndex(gridIndex);
           }
-          
         }
-        
+
+
+      }
+
+      fn applyBrushToGridIndex(gridIndex: i32) {
+
+        if (pointer.tool == PAINT) {
+          // paints[gridIndex] = 1.0;
+          paints[gridIndex] = paints[gridIndex] + 0.01;
+          // paints[gridIndex] = paints[gridIndex] + 0.1;
+          return;
+        }
+
+        elements[gridIndex] = i32(pointer.tool);
       }
 
       //=========//
       // HELPERS //
       //=========//
       const VOID = 99;
-      const AIR = 0;
+      const EMPTY = 0;
       const PIPE = 1;
+      const PAINT = 2;
 
       const CENTER = vec2(0, 0);
       const LEFT = vec2(-1, 0);
@@ -152,7 +178,22 @@ function getModule(device) {
         return elements[gridIndex];
       }
 
-      fn isGridPositionTouchingElement(gridPosition: vec2<i32>, element: i32) -> bool {
+      fn getPaintAtGridPosition(gridPosition: vec2<i32>) -> f32 {
+        if (gridPosition.x >= ${GRID_SIZE}i - 1 || gridPosition.y >= ${GRID_SIZE}i) {
+          return 0.0;
+        }
+
+        if (gridPosition.x < 0 || gridPosition.y < 0) {
+          return 0.0;
+        }
+
+        
+        
+        let gridIndex = getGridIndexFromGridPosition(gridPosition);
+        return paints[gridIndex];
+      }
+
+      fn isGridPositionTouchingElementShadow(gridPosition: vec2<i32>, element: i32) -> bool {
         // let up = getElementAtGridPosition(gridPosition + UP);
         // let left = getElementAtGridPosition(gridPosition + LEFT);
         // if (left == element) {
@@ -168,6 +209,24 @@ function getModule(device) {
         }
         return false;
       }
+
+
+      fn getNeighbouringMaxPaint(gridPosition: vec2<i32>) -> f32 {
+        let up = getPaintAtGridPosition(gridPosition + UP);
+        let down = getPaintAtGridPosition(gridPosition + DOWN);
+        let left = getPaintAtGridPosition(gridPosition + LEFT);
+        let right = getPaintAtGridPosition(gridPosition + RIGHT);
+        
+        let maxPaint = maxFour(up, down, left, right);
+        return maxPaint;
+      }
+
+      fn maxFour(a: f32, b: f32, c: f32, d: f32) -> f32 {
+        let ab = max(a, b);
+        let cd = max(c, d);
+        let abcd = max(ab, cd);
+        return abcd;
+      } 
 
       fn setElementAtGridPosition(gridPosition: vec2<i32>, value: i32) {
         if (gridPosition.x >= ${GRID_SIZE}i || gridPosition.y >= ${GRID_SIZE}i) {

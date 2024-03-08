@@ -5,6 +5,7 @@ let done = false;
 const ELEMENT_IDS = {
   pipe: 1,
   empty: 0,
+  paint: 2,
 };
 
 export async function useToolbar() {
@@ -34,5 +35,22 @@ export async function useToolbar() {
   brushSizeControl.addEventListener("input", (event) => {
     const brushSize = parseInt(event.target?.["value"]);
     pointerUniformValues[6] = brushSize;
+  });
+
+  addEventListener("keydown", (event) => {
+    switch (event.key) {
+      case "1": {
+        pointerUniformValues[5] = ELEMENT_IDS.paint;
+        return;
+      }
+      case "2": {
+        pointerUniformValues[5] = ELEMENT_IDS.pipe;
+        return;
+      }
+      case "3": {
+        pointerUniformValues[5] = ELEMENT_IDS.empty;
+        return;
+      }
+    }
   });
 }

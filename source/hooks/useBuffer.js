@@ -29,8 +29,8 @@ async function getBuffers() {
   });
 
   const pointerUniformValues = new Float32Array(8);
-  pointerUniformValues[5] = 1; // default to pipe tool
-  pointerUniformValues[6] = 5; // default to middle brush size
+  pointerUniformValues[5] = 2; // default tool
+  pointerUniformValues[6] = 5; // default brush size
   const pointerUniformBuffer = device.createBuffer({
     label: "pointer uniform buffer",
     size: pointerUniformValues.byteLength,
@@ -41,6 +41,13 @@ async function getBuffers() {
   const elementsStorageBuffer = device.createBuffer({
     label: "elements storage buffer",
     size: elementsStorageValues.byteLength,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+  });
+
+  const paintsStorageValues = new Float32Array(GRID_SIZE * GRID_SIZE);
+  const paintsStorageBuffer = device.createBuffer({
+    label: "paints storage buffer",
+    size: paintsStorageValues.byteLength,
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
 
@@ -60,6 +67,10 @@ async function getBuffers() {
     elements: {
       values: elementsStorageValues,
       buffer: elementsStorageBuffer,
+    },
+    paints: {
+      values: paintsStorageValues,
+      buffer: paintsStorageBuffer,
     },
   };
 }
