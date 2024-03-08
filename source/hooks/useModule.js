@@ -82,14 +82,14 @@ function getModule(device) {
 
         let gridIndex = getGridIndexFromPixelPosition(input.pixelPosition.xy);
         let gridPosition = getGridPositionFromPixelPosition(input.pixelPosition.xy);
-        let element = getElementAtGridPosition(gridPosition + UP);
+        let element = getElementAtGridPosition(gridPosition);
         if (element == PIPE) {
           if (isGridPositionTouchingElement(gridPosition, AIR)) {
             return vec4(${toShaderVector(SHADES[10])});
           }
           return vec4(${toShaderVector(SHADES[5])});
         }
-        return vec4(${toShaderVector(SHADES[1])});
+        return vec4(${toShaderVector(SHADES[2])});
       }
 
       //=========//
@@ -106,13 +106,6 @@ function getModule(device) {
         let left = getElementAtGridPosition(position + LEFT);
         let up = getElementAtGridPosition(position + UP);
         let down = getElementAtGridPosition(position + DOWN);
-
-        // if (pointer.down > 0.5) {
-        //   let pixelPosition = getPixelPositionFromGridPosition(position);
-        //   if (distance(pointer.position, pixelPosition) < 100.0) {
-        //     elements[gridIndex] = 1;
-        //   }
-        // }
 
         let pixelPosition = getPixelPositionFromGridPosition(position);
 
@@ -166,6 +159,10 @@ function getModule(device) {
         if (right == element) {
           return true;
         }
+        // let left = getElementAtGridPosition(gridPosition + LEFT);
+        // if (left == element) {
+        //   return true;
+        // }
         return false;
       }
 
