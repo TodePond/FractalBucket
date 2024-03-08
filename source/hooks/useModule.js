@@ -1,5 +1,9 @@
 import { SHADES, toShaderVector } from "../../libraries/habitat.js";
-import { BRUSH_SIZE, GRID_SIZE, WORKGROUP_SIZE } from "../constants.js";
+import {
+  BRUSH_SIZE_MODIFIER,
+  GRID_SIZE,
+  WORKGROUP_SIZE,
+} from "../constants.js";
 import { useDevice } from "./useDevice.js";
 
 /**
@@ -37,6 +41,8 @@ function getModule(device) {
         position: vec2<f32>,
         previousPosition: vec2<f32>,
         down: f32,
+        tool: f32,
+        size: f32,
       };
 
       struct VertexOutput {
@@ -111,13 +117,13 @@ function getModule(device) {
 
         if (pointer.down > 0.5) {
           let distanceToPointer = distance(pixelPosition, pointer.position);
-          if (distanceToPointer < ${BRUSH_SIZE}) {
-            elements[gridIndex] = 1;
+          if (distanceToPointer < pointer.size * ${BRUSH_SIZE_MODIFIER}) {
+            elements[gridIndex] = i32(pointer.tool);
           }
           
           let distanceToPointerLine = distanceToLine(pointer.previousPosition, pointer.position, pixelPosition);
-          if (distanceToPointerLine < ${BRUSH_SIZE}) {
-            elements[gridIndex] = 1;
+          if (distanceToPointerLine < pointer.size * ${BRUSH_SIZE_MODIFIER}) {
+            elements[gridIndex] = i32(pointer.tool);
           }
           
         }
@@ -148,8 +154,9 @@ function getModule(device) {
 
       fn isGridPositionTouchingElement(gridPosition: vec2<i32>, element: i32) -> bool {
         // let up = getElementAtGridPosition(gridPosition + UP);
-        // if (up == element) {
-        //   return true;
+        // let left = getElementAtGridPosition(gridPosition + LEFT);
+        // if (left == element) {
+        //   return false;
         // }
         let down = getElementAtGridPosition(gridPosition + DOWN);
         if (down == element) {
@@ -159,10 +166,6 @@ function getModule(device) {
         if (right == element) {
           return true;
         }
-        // let left = getElementAtGridPosition(gridPosition + LEFT);
-        // if (left == element) {
-        //   return true;
-        // }
         return false;
       }
 

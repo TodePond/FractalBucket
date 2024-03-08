@@ -28,7 +28,9 @@ async function getBuffers() {
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
-  const pointerUniformValues = new Float32Array(6);
+  const pointerUniformValues = new Float32Array(8);
+  pointerUniformValues[5] = 1; // default to pipe tool
+  pointerUniformValues[6] = 5; // default to middle brush size
   const pointerUniformBuffer = device.createBuffer({
     label: "pointer uniform buffer",
     size: pointerUniformValues.byteLength,
