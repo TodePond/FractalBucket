@@ -129,11 +129,6 @@ function getModule(device) {
           }
         }
 
-        if (element == SPLASH) {
-          paints[gridIndex] = 1.0;
-          elements[gridIndex] = EMPTY;
-        }
-
         if (pointer.down > 0.5) {
           let distanceToPointer = distance(pixelPosition, pointer.position);
           if (distanceToPointer < pointer.size * ${BRUSH_SIZE_MODIFIER}) {
@@ -155,18 +150,7 @@ function getModule(device) {
 
           let element = elements[gridIndex];
 
-          if (element == PIPE) {
-            // todo: place head
-            return;
-          }
-
-          if (element == EMPTY) {
-            elements[gridIndex] = SPLASH;
-            return;
-          }
-
-
-          // paints[gridIndex] = 1.0;
+          paints[gridIndex] = 1.0;
           // paints[gridIndex] = paints[gridIndex] + 0.01;
           // paints[gridIndex] = paints[gridIndex] + 0.1;
           return;
@@ -182,8 +166,8 @@ function getModule(device) {
       const EMPTY = 0;
       const PIPE = 1;
       const PAINT = 2;
-      const SPLASH = 3;
-      const HEAD = 4;
+      const HEAD = 3;
+      const TAIL = 4;
 
       const CENTER = vec2(0, 0);
       const LEFT = vec2(-1, 0);
