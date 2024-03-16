@@ -164,7 +164,7 @@ function getModule(device) {
           let element = elements[gridIndex];
           let paint = paints[gridIndex];
 
-          if (element == EMPTY) {
+          if (element == EMPTY || element == HEAD || element == TAIL) {
             if (paint > 0.0) {
               elements[gridIndex] = HEAD;
               return;
@@ -229,7 +229,7 @@ function getModule(device) {
         }
         let downDown = getElementAtGridPosition(gridPosition + DOWN + DOWN);
         if (downDown == element) {
-          // return true;
+          return true;
         }
         let right = getElementAtGridPosition(gridPosition + DOWN + RIGHT);
         if (right == element) {
