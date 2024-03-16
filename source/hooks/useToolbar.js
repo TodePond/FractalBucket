@@ -42,6 +42,7 @@ export async function useToolbar() {
   brushSizeControl.addEventListener("input", (event) => {
     const brushSize = parseInt(event.target?.["value"]);
     pointerUniformValues[6] = brushSize;
+    localStorage.setItem("brushSize", brushSize.toString());
   });
 
   const localStorageBrushSize = localStorage.getItem("brushSize");
