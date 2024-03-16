@@ -98,6 +98,9 @@ function getModule(device) {
           let colour = vec4(${toShaderVector(SHADES[5])});
           return vec4(colour.r, colour.g + paint / 2.0, colour.b + paint, 1.0);
         }
+        if (element == HEAD) {
+          return vec4(${toShaderVector(SHADES[10])});
+        }
         let colour = vec4(${toShaderVector(SHADES[2])});
         return vec4(colour.r, colour.g + paint / 2.0, colour.b + paint, 1.0);
       }
@@ -120,13 +123,7 @@ function getModule(device) {
         let pixelPosition = getPixelPositionFromGridPosition(position);
 
         if (element == PIPE) {
-          let maxPaint = getNeighbouringMaxPaint(position);
           let paint = paints[gridIndex];
-          if (maxPaint > paint) {
-            // let difference = maxPaint - paint;
-            // paints[gridIndex] = maxPaint - 0.005;
-            // paints[gridIndex] = paint + difference * 0.1;
-          }
         }
 
         if (pointer.down > 0.5) {
@@ -149,11 +146,32 @@ function getModule(device) {
         if (pointer.tool == PAINT) {
 
           let element = elements[gridIndex];
+          if (element == EMPTY) {
+            paints[gridIndex] = 1.0;
+            return;
+          }
 
-          paints[gridIndex] = 1.0;
-          // paints[gridIndex] = paints[gridIndex] + 0.01;
-          // paints[gridIndex] = paints[gridIndex] + 0.1;
+          if (element == PIPE) {
+            elements[gridIndex] = HEAD;
+            paints[gridIndex] = 1.0;
+            return;
+          }
+
           return;
+        }
+
+        if (pointer.tool == PIPE) {
+          let element = elements[gridIndex];
+          let paint = paints[gridIndex];
+
+          if (element == EMPTY) {
+            if (paint > 0.0) {
+              elements[gridIndex] = HEAD;
+              return;
+            }
+            elements[gridIndex] = PIPE;
+            return;
+          }
         }
 
         elements[gridIndex] = i32(pointer.tool);
