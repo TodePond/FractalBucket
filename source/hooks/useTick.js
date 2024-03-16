@@ -16,7 +16,7 @@ export async function useTick() {
 
   const tick = () => {
     let i = 0;
-    while (i < 10) {
+    while (i < 1) {
       clockUniformValues[0] = frame;
       device.queue.writeBuffer(clockUniformBuffer, 0, clockUniformValues);
       frame++;
