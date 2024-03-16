@@ -123,15 +123,16 @@ function getModule(device) {
           let maxPaint = getNeighbouringMaxPaint(position);
           let paint = paints[gridIndex];
           if (maxPaint > paint) {
-            let difference = maxPaint - paint;
-            paints[gridIndex] = paint + difference * 0.1;
+            // let difference = maxPaint - paint;
+            paints[gridIndex] = maxPaint - 0.005;
+            // paints[gridIndex] = paint + difference * 0.1;
           }
         }
 
         if (pointer.down > 0.5) {
           let distanceToPointer = distance(pixelPosition, pointer.position);
           if (distanceToPointer < pointer.size * ${BRUSH_SIZE_MODIFIER}) {
-            // applyBrushToGridIndex(gridIndex);
+            applyBrushToGridIndex(gridIndex);
           }
           
           let distanceToPointerLine = distanceToLine(pointer.previousPosition, pointer.position, pixelPosition);
@@ -146,8 +147,8 @@ function getModule(device) {
       fn applyBrushToGridIndex(gridIndex: i32) {
 
         if (pointer.tool == PAINT) {
-          // paints[gridIndex] = 1.0;
-          paints[gridIndex] = paints[gridIndex] + 0.01;
+          paints[gridIndex] = 1.0;
+          // paints[gridIndex] = paints[gridIndex] + 0.01;
           // paints[gridIndex] = paints[gridIndex] + 0.1;
           return;
         }
@@ -203,7 +204,11 @@ function getModule(device) {
         if (down == element) {
           return true;
         }
-        let right = getElementAtGridPosition(gridPosition + RIGHT);
+        let downDown = getElementAtGridPosition(gridPosition + DOWN + DOWN);
+        if (downDown == element) {
+          // return true;
+        }
+        let right = getElementAtGridPosition(gridPosition + DOWN + RIGHT);
         if (right == element) {
           return true;
         }
